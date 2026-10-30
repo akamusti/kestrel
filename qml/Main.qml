@@ -18,7 +18,7 @@ Window {
 
     width: 760
     height: 560
-    visible: true
+    visible: !startHidden
     color: "transparent"
     title: qsTr("Kestrel")
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -75,6 +75,59 @@ Window {
         id: results
         index: appIndex
         query: searchField.text
+    }
+
+    AutostartManager {
+        id: autostart
+    }
+
+    Dialog {
+        id: autostartDialog
+        width: 420
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        visible: autostart.setupPromptRequired
+        title: qsTr("Start Kestrel automatically?")
+        standardButtons: Dialog.NoButton
+
+        contentItem: Column {
+            spacing: 12
+
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr("Kestrel needs to be running for its global shortcut to work. "
+                           + "Allow it to start in the background when you sign in?")
+            }
+
+            Label {
+                width: parent.width
+                visible: autostart.errorMessage.length > 0
+                wrapMode: Text.Wrap
+                color: "#e57373"
+                text: autostart.errorMessage
+            }
+        }
+
+        footer: Item {
+            implicitHeight: buttons.implicitHeight
+
+            Row {
+                id: buttons
+                anchors.right: parent.right
+                spacing: 8
+
+                Button {
+                    text: qsTr("Not now")
+                    onClicked: autostart.dismissSetupPrompt()
+                }
+
+                Button {
+                    text: qsTr("Enable")
+                    onClicked: autostart.enableAtLogin()
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -228,7 +281,8 @@ Window {
                     anchors.left: parent.left
                     anchors.leftMargin: 22
                     anchors.verticalCenter: parent.verticalCenter
-                    text: section === "suggestions" ? qsTr("SUGGESTIONS") : qsTr("RESULTS")
+                    text: section === "suggestions" ? qsTr("SUGGESTIONS")
+                          : section === "krunner" ? qsTr("KRUNNER") : qsTr("RESULTS")
                     color: "#7a7a85"
                     font.pixelSize: 10
                     font.letterSpacing: 0.8

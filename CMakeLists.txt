@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(Kestrel VERSION 0.1.0 LANGUAGES CXX)
+project(Kestrel VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,6 +14,8 @@ include(GNUInstallDirs)
 qt_standard_project_setup()
 
 qt_add_library(kestrel_core STATIC
+    src/autostartmanager.cpp
+    src/autostartmanager.h
     src/desktopentry.cpp
     src/desktopentry.h
     src/appindex.cpp
@@ -26,6 +28,8 @@ qt_add_library(kestrel_core STATIC
     src/searchmodel.h
     src/launcher.cpp
     src/launcher.h
+    src/krunnerclient.cpp
+    src/krunnerclient.h
     src/kglobalaccelclient.cpp
     src/kglobalaccelclient.h
 )

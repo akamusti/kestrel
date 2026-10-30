@@ -3,6 +3,7 @@
 #include <QIcon>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QQmlContext>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
@@ -25,7 +26,7 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Kestrel"));
     QGuiApplication::setOrganizationName(QStringLiteral("Kestrel"));
     QGuiApplication::setOrganizationDomain(QStringLiteral("kestrel.dev"));
-    QGuiApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QGuiApplication::setApplicationVersion(QStringLiteral("0.2.0"));
     QGuiApplication::setDesktopFileName(QStringLiteral("dev.kestrel.Kestrel"));
     QGuiApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("system-search")));
 
@@ -34,6 +35,8 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addOption({QStringLiteral("toggle"), QStringLiteral("Toggle the running instance.")});
+    parser.addOption({QStringLiteral("start-hidden"),
+                      QStringLiteral("Start in the background without showing the palette.")});
     parser.addOption({QStringLiteral("quit-after-first-frame"),
                       QStringLiteral("Render one frame and exit (headless smoke test).")});
     parser.addOption({QStringLiteral("grab"),
@@ -45,6 +48,9 @@ int main(int argc, char *argv[])
     QLocalSocket probe;
     probe.connectToServer(QString::fromLatin1(kServerName));
     if (probe.waitForConnected(150)) {
+        if (parser.isSet(QStringLiteral("start-hidden"))) {
+            return 0;
+        }
         probe.write("toggle\n");
         probe.flush();
         probe.waitForBytesWritten(150);
@@ -58,6 +64,8 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextProperty(
+        QStringLiteral("startHidden"), parser.isSet(QStringLiteral("start-hidden")));
     // QML warnings must never be silent: a missing module only shows up as an empty window,
     // so they are written straight to stderr instead of going through the Qt logging rules.
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, [](const QList<QQmlError> &warnings) {

@@ -1,15 +1,57 @@
 #include <QDateTime>
+#include <QDBusConnection>
+#include <QDBusMetaType>
 #include <QDir>
+#include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
+#include "autostartmanager.h"
 #include "desktopentry.h"
 #include "kglobalaccelclient.h"
+#include "krunnerclient.h"
 #include "ranker.h"
+#include "searchmodel.h"
 #include "usagestore.h"
 
 using namespace kestrel;
+
+class TestKRunner : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.kde.krunner1")
+
+public:
+    int runCount() const { return m_runCount; }
+
+public slots:
+    KRunnerRemoteMatches Match(const QString &query)
+    {
+        if (query != QStringLiteral("calc")) {
+            return {};
+        }
+
+        KRunnerRemoteMatch match;
+        match.id = QStringLiteral("calculator-result");
+        match.text = QStringLiteral("Calculator result");
+        match.iconName = QStringLiteral("accessories-calculator");
+        match.categoryRelevance = 100;
+        match.relevance = 0.9;
+        match.properties.insert(QStringLiteral("subtext"), QStringLiteral("42"));
+        return {match};
+    }
+
+    void Run(const QString &matchId, const QString &actionId)
+    {
+        if (matchId == QStringLiteral("calculator-result") && actionId.isEmpty()) {
+            ++m_runCount;
+        }
+    }
+
+private:
+    int m_runCount = 0;
+};
 
 class TestCore : public QObject
 {
@@ -30,6 +72,11 @@ private slots:
     void resolvesExecutableFileName();
     void globalShortcutIgnoresUnrelatedActions();
     void globalShortcutRequestsPaletteToggle();
+    void autostartCanBeEnabledWithUserConsent();
+    void autostartPromptCanBeDismissed();
+    void parsesKRunnerDbusRunnerMetadata();
+    void ignoresDisabledAndNonDbusRunners();
+    void krunnerResultsAreAddedAndRunOverDbus();
 };
 
 void TestCore::exactMatchScoresHighest()
@@ -214,6 +261,163 @@ void TestCore::globalShortcutRequestsPaletteToggle()
         &client, "handleShortcutPressed", Qt::DirectConnection,
         Q_ARG(QString, QStringLiteral("togglePalette")), Q_ARG(QVariantMap, options)));
     QCOMPARE(toggleSpy.count(), 1);
+}
+
+void TestCore::autostartCanBeEnabledWithUserConsent()
+{
+    QTemporaryDir configDir;
+    QVERIFY(configDir.isValid());
+    const QByteArray previousConfig = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", configDir.path().toLocal8Bit());
+
+    {
+        AutostartManager manager;
+        QVERIFY(manager.setupPromptRequired());
+        QVERIFY(manager.enableAtLogin());
+        QVERIFY(!manager.setupPromptRequired());
+
+        const QString entryPath =
+            configDir.filePath(QStringLiteral("autostart/dev.kestrel.Kestrel.desktop"));
+        QFile entry(entryPath);
+        QVERIFY(entry.open(QIODevice::ReadOnly | QIODevice::Text));
+        const QByteArray contents = entry.readAll();
+        QVERIFY(contents.contains("Exec=\""));
+        QVERIFY(contents.contains("--start-hidden"));
+
+        AutostartManager secondManager;
+        QVERIFY(!secondManager.setupPromptRequired());
+    }
+
+    if (previousConfig.isNull()) {
+        qunsetenv("XDG_CONFIG_HOME");
+    } else {
+        qputenv("XDG_CONFIG_HOME", previousConfig);
+    }
+}
+
+void TestCore::autostartPromptCanBeDismissed()
+{
+    QTemporaryDir configDir;
+    QVERIFY(configDir.isValid());
+    const QByteArray previousConfig = qgetenv("XDG_CONFIG_HOME");
+    qputenv("XDG_CONFIG_HOME", configDir.path().toLocal8Bit());
+
+    {
+        AutostartManager manager;
+        QVERIFY(manager.setupPromptRequired());
+        manager.dismissSetupPrompt();
+        QVERIFY(!manager.setupPromptRequired());
+
+        AutostartManager secondManager;
+        QVERIFY(!secondManager.setupPromptRequired());
+        QVERIFY(!QFileInfo::exists(
+            configDir.filePath(QStringLiteral("autostart/dev.kestrel.Kestrel.desktop"))));
+    }
+
+    if (previousConfig.isNull()) {
+        qunsetenv("XDG_CONFIG_HOME");
+    } else {
+        qputenv("XDG_CONFIG_HOME", previousConfig);
+    }
+}
+
+void TestCore::parsesKRunnerDbusRunnerMetadata()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("runner.desktop"));
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("[Desktop Entry]\n"
+               "X-KDE-ServiceTypes=Plasma/Runner\n"
+               "X-Plasma-API=DBus\n"
+               "X-Plasma-DBusRunner-Service=org.example.runner\n"
+               "X-Plasma-DBusRunner-Path=/runner\n");
+    file.close();
+
+    const KRunnerDescriptor descriptor = parseKRunnerDescriptor(path);
+    QCOMPARE(descriptor.service, QStringLiteral("org.example.runner"));
+    QCOMPARE(descriptor.objectPath, QStringLiteral("/runner"));
+}
+
+void TestCore::ignoresDisabledAndNonDbusRunners()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("runner.desktop"));
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("[Desktop Entry]\n"
+               "X-Plasma-API=DBus\n"
+               "X-Plasma-DBusRunner-Service=org.example.runner\n"
+               "X-KDE-PluginInfo-EnabledByDefault=false\n");
+    file.close();
+    QVERIFY(parseKRunnerDescriptor(path).service.isEmpty());
+
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text));
+    file.write("[Desktop Entry]\n"
+               "X-Plasma-API=Command\n"
+               "X-Plasma-DBusRunner-Service=org.example.runner\n");
+    file.close();
+    QVERIFY(parseKRunnerDescriptor(path).service.isEmpty());
+}
+
+void TestCore::krunnerResultsAreAddedAndRunOverDbus()
+{
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    if (!bus.isConnected()) {
+        QSKIP("Session D-Bus is unavailable");
+    }
+
+    QTemporaryDir dataDir;
+    QVERIFY(dataDir.isValid());
+    const QByteArray previousData = qgetenv("XDG_DATA_HOME");
+    qputenv("XDG_DATA_HOME", dataDir.path().toLocal8Bit());
+
+    const QString serviceName =
+        QStringLiteral("org.example.KestrelTestRunner%1").arg(QCoreApplication::applicationPid());
+    const QString runnerDirectory = dataDir.filePath(QStringLiteral("kservices6"));
+    QVERIFY(QDir().mkpath(runnerDirectory));
+    QFile descriptor(QDir(runnerDirectory).filePath(QStringLiteral("test-runner.desktop")));
+    QVERIFY(descriptor.open(QIODevice::WriteOnly | QIODevice::Text));
+    descriptor.write(QStringLiteral("[Desktop Entry]\n"
+                                    "X-Plasma-API=DBus\n"
+                                    "X-Plasma-DBusRunner-Service=%1\n"
+                                    "X-Plasma-DBusRunner-Path=/runner\n")
+                         .arg(serviceName)
+                         .toUtf8());
+    descriptor.close();
+
+    qDBusRegisterMetaType<KRunnerRemoteMatch>();
+    qDBusRegisterMetaType<KRunnerRemoteMatches>();
+    QVERIFY(bus.registerService(serviceName));
+    TestKRunner runner;
+    QVERIFY(bus.registerObject(QStringLiteral("/runner"), &runner,
+                               QDBusConnection::ExportAllSlots));
+
+    {
+        SearchModel model;
+        model.setQuery(QStringLiteral("calc"));
+        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1, 5000);
+        const QAbstractItemModel *modelBase = &model;
+        const QModelIndex matchIndex = modelBase->index(0, 0);
+        QCOMPARE(model.data(matchIndex, SearchModel::NameRole).toString(),
+                 QStringLiteral("Calculator result"));
+        QCOMPARE(model.data(matchIndex, SearchModel::SubtitleRole).toString(),
+                 QStringLiteral("42"));
+        QCOMPARE(model.data(matchIndex, SearchModel::SourceRole).toString(),
+                 QStringLiteral("krunner"));
+        QVERIFY(model.launch(0));
+        QTRY_COMPARE_WITH_TIMEOUT(runner.runCount(), 1, 5000);
+    }
+
+    bus.unregisterObject(QStringLiteral("/runner"));
+    bus.unregisterService(serviceName);
+    if (previousData.isNull()) {
+        qunsetenv("XDG_DATA_HOME");
+    } else {
+        qputenv("XDG_DATA_HOME", previousData);
+    }
 }
 
 QTEST_GUILESS_MAIN(TestCore)

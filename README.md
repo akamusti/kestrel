@@ -12,11 +12,13 @@ how fast it answers a keystroke (**≤ 16 ms**, one frame). Everything else is n
 - 130+ applications indexed in the background at startup; typing never touches the disk.
 - Ranking follows Raycast's model: fuzzy match class → score → frecency → collation.
 - Frecency and learned search terms persist between launches.
+- Installed KRunner D-Bus runners provide asynchronous results for apps, calculations, windows,
+  units and other Plasma runner features.
 - KDE global shortcut: `Meta+Space` toggles the running palette through KGlobalAccel.
 - Single instance: a second launch toggles the running window instead of starting a new one.
 
-Status: early. Applications launch, ranking and frecency work, KRunner bridging and the action panel
-are not here yet — see [Roadmap](#roadmap).
+Status: early. Applications launch, ranking, frecency and KRunner D-Bus results work; see the
+[Roadmap](#roadmap) for what's next.
 
 ## Requirements
 
@@ -83,8 +85,8 @@ attaches the AppImage if every step succeeds. To install the latest published ve
    it. Replace the filename below with the exact name you downloaded:
 
    ```bash
-   chmod +x ~/Applications/Kestrel-v0.1.0-x86_64.AppImage
-   ~/Applications/Kestrel-v0.1.0-x86_64.AppImage
+   chmod +x ~/Applications/Kestrel-v0.2.0-x86_64.AppImage
+   ~/Applications/Kestrel-v0.2.0-x86_64.AppImage
    ```
 
 To update, download the AppImage from a newer release and replace the old file. You do not need Qt
@@ -120,11 +122,16 @@ Not available yet. Packaging for Fedora/openSUSE/Arch follows once the feature s
 
 ## Global shortcut (KDE Plasma 6)
 
-You can use Kestrel's built-in shortcut or create a KDE shortcut that starts the app when it is not
-already running. The second method is recommended if you want one key to work even after logging in
-before you have opened Kestrel.
+Kestrel registers its built-in `Meta+Space` shortcut while it is running. On first launch, it asks
+whether it may add a user-level autostart entry so the app is already running (hidden) after sign-in
+and the shortcut works immediately. This only writes to your own `~/.config/autostart` directory;
+it does not require administrator permission. Choose **Not now** to skip it, or remove **Kestrel**
+from **System Settings → Autostart** later.
 
-#### Recommended: make a KDE shortcut that starts or toggles Kestrel
+If you prefer not to keep Kestrel running in the background, you can instead create a KDE command
+shortcut that starts it on demand:
+
+#### Manual alternative: make a KDE shortcut that starts or toggles Kestrel
 
 1. First make sure Kestrel runs by opening it once. For an AppImage, open the file you downloaded;
    for a source install, open **Kestrel** from the application menu.
@@ -147,10 +154,9 @@ before you have opened Kestrel.
    it. The `--toggle` command starts Kestrel if it is closed and toggles the already-running instance.
 
 If Plasma reports that the key is already in use, choose another combination or change the
-conflicting shortcut. Kestrel also registers a built-in `Meta+Space` shortcut while it is running.
-Do not assign the same key to both Kestrel's built-in action and a KDE command shortcut; change one
-of them under **System Settings → Keyboard → Shortcuts** to avoid a conflict. `Alt+Space` is commonly
-used by KRunner.
+conflicting shortcut. Do not assign the same key to both Kestrel's built-in action and a KDE command
+shortcut; change one of them under **System Settings → Keyboard → Shortcuts** to avoid a conflict.
+`Alt+Space` is commonly used by KRunner.
 
 #### Use Kestrel's built-in shortcut
 
@@ -204,7 +210,7 @@ The observation notes behind these numbers, including the KRunner D-Bus contract
 1. [x] Skeleton: window, search, application list, Enter to launch
 2. [x] Global shortcut (`kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
-4. [ ] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
+4. [x] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
 5. [ ] Action panel (`Ctrl+K`), filters (`Ctrl+P`), fallback web search
 6. [ ] Calculator / unit / date inline results
 7. [ ] File search (Baloo or an `fd` subprocess)

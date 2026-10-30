@@ -5,6 +5,7 @@
 #include <QVector>
 
 #include "appindex.h"
+#include "krunnerclient.h"
 #include "usagestore.h"
 
 namespace kestrel {
@@ -30,6 +31,7 @@ public:
         SectionRole,
         KindRole,
         TerminalRole,
+        SourceRole,
     };
     Q_ENUM(Roles)
 
@@ -63,16 +65,21 @@ private:
     struct Result
     {
         int entryIndex = -1;
+        int runnerIndex = -1;
+        bool isRunner = false;
         int score = 0;
         double frecency = 1.0;
         int section = 0;
     };
 
     void rebuild();
+    void appendKRunnerMatches(const QString &query, const QVector<KRunnerMatch> &matches);
 
     AppIndex *m_index = nullptr;
     UsageStore *m_usage = nullptr;
+    KRunnerClient *m_krunnerClient = nullptr;
     QVector<DesktopEntry> m_entries;
+    QVector<KRunnerMatch> m_krunnerMatches;
     QString m_query;
     QVector<Result> m_results;
 };

@@ -131,7 +131,7 @@ QML:
 1. [x] Skeleton: window, search, application list, Enter to launch
 2. [x] Global shortcut (KDE `kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
-4. [ ] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
+4. [x] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
 5. [ ] Action panel (Ctrl+K), filters (Ctrl+P), fallback web search
 6. [ ] Calculator / unit / date inline results
 7. [ ] File search (Baloo/`kio` or an `fd` subprocess)

@@ -38,7 +38,10 @@ struct Scored
 SearchModel::SearchModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_usage(new UsageStore(this))
+    , m_krunnerClient(new KRunnerClient(this))
 {
+    connect(m_krunnerClient, &KRunnerClient::matchesReady, this,
+            &SearchModel::appendKRunnerMatches);
 }
 
 void SearchModel::setIndex(AppIndex *indexed)
@@ -69,8 +72,10 @@ void SearchModel::setQuery(const QString &query)
         return;
     }
     m_query = query;
+    m_krunnerMatches.clear();
     emit queryChanged();
     rebuild();
+    m_krunnerClient->search(query);
 }
 
 int SearchModel::rowCount(const QModelIndex &parent) const
@@ -91,6 +96,7 @@ QHash<int, QByteArray> SearchModel::roleNames() const
         {SectionRole, QByteArrayLiteral("section")},
         {KindRole, QByteArrayLiteral("kind")},
         {TerminalRole, QByteArrayLiteral("isTerminal")},
+        {SourceRole, QByteArrayLiteral("source")},
     };
 }
 
@@ -100,6 +106,32 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         return {};
     }
     const Result &result = m_results.at(index.row());
+    if (result.isRunner) {
+        if (result.runnerIndex < 0 || result.runnerIndex >= m_krunnerMatches.size()) {
+            return {};
+        }
+        const KRunnerMatch &match = m_krunnerMatches.at(result.runnerIndex);
+        switch (role) {
+        case IdRole:
+            return match.service + QLatin1Char('/') + match.id;
+        case NameRole:
+            return match.text;
+        case SubtitleRole:
+            return match.subtitle.isEmpty() ? match.category : match.subtitle;
+        case IconRole:
+            return match.iconName.isEmpty() ? QStringLiteral("system-search") : match.iconName;
+        case SectionRole:
+            return QStringLiteral("krunner");
+        case KindRole:
+            return QStringLiteral("KRunner");
+        case TerminalRole:
+            return false;
+        case SourceRole:
+            return QStringLiteral("krunner");
+        default:
+            return {};
+        }
+    }
     if (result.entryIndex < 0 || result.entryIndex >= m_entries.size()) {
         return {};
     }
@@ -121,6 +153,8 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         return entry.terminal ? QStringLiteral("Terminal") : QStringLiteral("Application");
     case TerminalRole:
         return entry.terminal;
+    case SourceRole:
+        return QStringLiteral("application");
     default:
         return {};
     }
@@ -132,6 +166,12 @@ QString SearchModel::nameAt(int row) const
         return {};
     }
     const Result &result = m_results.at(row);
+    if (result.isRunner) {
+        if (result.runnerIndex < 0 || result.runnerIndex >= m_krunnerMatches.size()) {
+            return {};
+        }
+        return m_krunnerMatches.at(result.runnerIndex).text;
+    }
     if (result.entryIndex < 0 || result.entryIndex >= m_entries.size()) {
         return {};
     }
@@ -144,6 +184,13 @@ bool SearchModel::launch(int row)
         return false;
     }
     const Result &result = m_results.at(row);
+    if (result.isRunner) {
+        if (result.runnerIndex < 0 || result.runnerIndex >= m_krunnerMatches.size()) {
+            return false;
+        }
+        m_krunnerClient->run(m_krunnerMatches.at(result.runnerIndex));
+        return true;
+    }
     if (result.entryIndex < 0 || result.entryIndex >= m_entries.size()) {
         return false;
     }
@@ -325,7 +372,36 @@ void SearchModel::rebuild()
         m_results.append(result);
     }
 
+    for (int i = 0; i < m_krunnerMatches.size(); ++i) {
+        Result result;
+        result.runnerIndex = i;
+        result.isRunner = true;
+        result.section = ResultsSection;
+        m_results.append(result);
+    }
+
     endResetModel();
+    emit countChanged();
+}
+
+void SearchModel::appendKRunnerMatches(const QString &query,
+                                      const QVector<KRunnerMatch> &matches)
+{
+    if (query != m_query.trimmed() || query.isEmpty() || matches.isEmpty()) {
+        return;
+    }
+
+    const int first = static_cast<int>(m_results.size());
+    m_krunnerMatches = matches;
+    beginInsertRows(QModelIndex(), first, first + matches.size() - 1);
+    for (int i = 0; i < matches.size(); ++i) {
+        Result result;
+        result.runnerIndex = i;
+        result.isRunner = true;
+        result.section = ResultsSection;
+        m_results.append(result);
+    }
+    endInsertRows();
     emit countChanged();
 }
 

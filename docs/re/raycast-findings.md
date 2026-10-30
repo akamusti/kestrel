@@ -118,8 +118,8 @@ shell commands, web search keywords, system settings, power, and more. Some are 
 
 **D-Bus runner contract [S3, `gdbus introspect`]:** `org.kde.krunner1`:
 ```
-Match(query: s) → a(sssuda{sv})
-      // (id, text, iconName, category+relevance, type, properties)
+Match(query: s) → a(sssida{sv})
+      // (id, text, iconName, category relevance, relevance, properties)
 Actions(matchId: s) → a(sss)      // (id, text, icon)
 Run(matchId: s, actionId: s)
 ```
@@ -139,8 +139,10 @@ way to use KRunner as a result source is the runners' own D-Bus interfaces, not
 3. **Ranking:** KRunner's `category+relevance` pair enters Kestrel as a **section priority**;
    frecency and the match-class hierarchy stay Kestrel's (the Raycast model).
 
-Next step: a `KRunnerClient` (`QDBusInterface`, ~120 ms timeout, cancellable requests) plus a
-`source` role on the model.
+Implemented in `src/krunnerclient.cpp`: runner metadata is discovered off the UI thread, `Match`
+calls are debounced and asynchronous with a bounded timeout, and results are appended after native
+applications. Activating a runner result invokes its `Run` method. Superseded query replies are
+discarded; Kestrel's application fast path remains local and immediate.
 
 ## 6. Open questions
 
