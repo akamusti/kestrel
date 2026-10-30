@@ -5,6 +5,9 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   appimage:
     runs-on: ubuntu-24.04
@@ -40,6 +43,7 @@ jobs:
           curl -fL -o linuxdeploy-plugin-qt \
             https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy linuxdeploy-plugin-qt
+          echo "$PWD" >> "$GITHUB_PATH"
 
       - name: Package
         run: |
@@ -55,3 +59,13 @@ jobs:
           name: Kestrel-AppImage
           path: "*.AppImage"
           if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" ./*.AppImage \
+            --verify-tag \
+            --generate-notes \
+            --title "Kestrel $GITHUB_REF_NAME"

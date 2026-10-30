@@ -65,42 +65,35 @@ There are two ways to get Kestrel:
 
 ### AppImage: download and run
 
-GitHub Actions builds the AppImage for this project. To download the latest available build:
+For each version tag, GitHub Actions builds and tests Kestrel, then creates a GitHub Release and
+attaches the AppImage if every step succeeds. To install the latest published version:
 
-1. Open the [Kestrel repository](https://github.com/akamusti/kestrel) on GitHub and select the
-   **Actions** tab.
-2. Select the **AppImage** workflow in the left-hand list. To start a build yourself, select
-   **Run workflow**, choose the `main` branch, then select **Run workflow** again. You can also use
-   a version tag when one is published. Manually starting a workflow requires write access to this
-   repository; otherwise, download an artifact from an existing successful run.
-3. Open a completed run with a green check mark. Under **Artifacts**, download
-   **Kestrel-AppImage**. A failed run (red X) did not produce a usable download; open it to see which
-   step failed.
-4. Extract the downloaded ZIP file. Inside it is a file ending in `.AppImage`.
-5. Move that file somewhere you can find it again, for example a new `Applications` folder in your
-   home directory. In a terminal, you can create that folder with:
+1. Open [Kestrel Releases](https://github.com/akamusti/kestrel/releases).
+2. Open the latest version and download the file ending in `.AppImage` under **Assets**. If no
+   release is listed yet, the first build may still be running or may have failed; check the
+   repository's **Actions → AppImage** page for its status.
+3. Make an `Applications` folder in your home directory if you do not already have one. In a
+   terminal, run:
 
    ```bash
    mkdir -p ~/Applications
    ```
 
-6. Make the file executable and run it. Replace the filename below with the name of the file you
-   downloaded:
+4. Move the downloaded AppImage into `~/Applications`. In a terminal, make it executable and run
+   it. Replace the filename below with the exact name you downloaded:
 
    ```bash
-   chmod +x ~/Applications/Kestrel-*.AppImage
-   ~/Applications/Kestrel-*.AppImage
+   chmod +x ~/Applications/Kestrel-v0.1.0-x86_64.AppImage
+   ~/Applications/Kestrel-v0.1.0-x86_64.AppImage
    ```
 
-The downloaded Actions artifact is a **build download**, not a GitHub Release. It is only available
-from that workflow run and may expire according to GitHub's artifact-retention policy. To update,
-download the artifact from a newer successful run and replace the old file. The AppImage workflow
-has not completed successfully on GitHub yet, so a downloadable AppImage is not available until its
-first successful run.
+To update, download the AppImage from a newer release and replace the old file. You do not need Qt
+or a compiler to use the AppImage.
 
 GitHub shows a failed run with a red X and identifies the failed step in its log. To receive
 notifications about failed runs, enable GitHub Actions notifications in your GitHub notification
-settings; the workflow does not send email on its own.
+settings; the workflow does not send email on its own. A manually started workflow run also provides
+a temporary **Kestrel-AppImage** artifact, but only a successful version-tag run creates a Release.
 
 ### Build from source and install for your user
 
