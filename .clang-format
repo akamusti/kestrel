@@ -1,0 +1,26 @@
+---
+Language: Cpp
+BasedOnStyle: WebKit
+Standard: c++20
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+PointerAlignment: Left
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterEnum: false
+  BeforeCatch: false
+  BeforeElse: false
+  SplitEmptyFunction: false
+NamespaceIndentation: None
+SortIncludes: CaseSensitive
+IncludeBlocks: Preserve

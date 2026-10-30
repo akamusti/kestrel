@@ -1,0 +1,27 @@
+# Build output
+build/
+build-*/
+cmake-build-*/
+compile_commands.json
+CMakeUserPresets.json
+
+# Qt / KDE generated
+*.moc
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+.qmlls.ini
+.kdev4/
+*.kdev4
+*.user
+
+# Editors / tooling
+.vscode/
+.idea/
+.cache/
+clangd/
+*.swp
+*~
+
+# Runtime state
+.kestrel/
