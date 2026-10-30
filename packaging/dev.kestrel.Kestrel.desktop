@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Kestrel
+GenericName=Command Palette
+Comment=Find and open what you meant within 100 ms
+Exec=kestrel --toggle
+Icon=dev.kestrel.Kestrel
+Terminal=false
+Categories=Utility;Qt;KDE;
+Keywords=launcher;search;palette;command;run;
+StartupNotify=false
+StartupWMClass=kestrel

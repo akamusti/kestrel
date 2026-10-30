@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Concurrent Test)
 
+include(GNUInstallDirs)
+
 qt_standard_project_setup()
 
 qt_add_library(kestrel_core STATIC
@@ -54,6 +56,12 @@ qt_add_executable(kestrel
 target_link_libraries(kestrel PRIVATE kestrel_core kestrel_coreplugin Qt6::Quick Qt6::QuickControls2
                                         Qt6::Gui)
 qt_import_qml_plugins(kestrel)
+
+install(TARGETS kestrel RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES packaging/dev.kestrel.Kestrel.desktop
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES packaging/dev.kestrel.Kestrel.svg
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 
 enable_testing()
 
