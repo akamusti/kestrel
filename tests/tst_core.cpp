@@ -1,9 +1,11 @@
 #include <QDateTime>
 #include <QDir>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
 #include "desktopentry.h"
+#include "kglobalaccelclient.h"
 #include "ranker.h"
 #include "usagestore.h"
 
@@ -26,6 +28,8 @@ private slots:
     void skipsHiddenAndNonApplicationEntries();
     void expandsExecFieldCodes();
     void resolvesExecutableFileName();
+    void globalShortcutIgnoresUnrelatedActions();
+    void globalShortcutRequestsPaletteToggle();
 };
 
 void TestCore::exactMatchScoresHighest()
@@ -186,6 +190,30 @@ void TestCore::resolvesExecutableFileName()
     QCOMPARE(executableFileName(QStringLiteral("SERVER=1 /opt/app %F")),
              QStringLiteral("app"));
     QCOMPARE(executableFileName(QString()), QString());
+}
+
+void TestCore::globalShortcutIgnoresUnrelatedActions()
+{
+    KGlobalAccelClient client;
+    QSignalSpy toggleSpy(&client, &KGlobalAccelClient::toggleRequested);
+    const QVariantMap options;
+
+    QVERIFY(QMetaObject::invokeMethod(
+        &client, "handleShortcutPressed", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("anotherAction")), Q_ARG(QVariantMap, options)));
+    QCOMPARE(toggleSpy.count(), 0);
+}
+
+void TestCore::globalShortcutRequestsPaletteToggle()
+{
+    KGlobalAccelClient client;
+    QSignalSpy toggleSpy(&client, &KGlobalAccelClient::toggleRequested);
+    const QVariantMap options;
+
+    QVERIFY(QMetaObject::invokeMethod(
+        &client, "handleShortcutPressed", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("togglePalette")), Q_ARG(QVariantMap, options)));
+    QCOMPARE(toggleSpy.count(), 1);
 }
 
 QTEST_GUILESS_MAIN(TestCore)

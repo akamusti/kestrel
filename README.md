@@ -12,6 +12,7 @@ how fast it answers a keystroke (**≤ 16 ms**, one frame). Everything else is n
 - 130+ applications indexed in the background at startup; typing never touches the disk.
 - Ranking follows Raycast's model: fuzzy match class → score → frecency → collation.
 - Frecency and learned search terms persist between launches.
+- KDE global shortcut: `Meta+Space` toggles the running palette through KGlobalAccel.
 - Single instance: a second launch toggles the running window instead of starting a new one.
 
 Status: early. Applications launch, ranking and frecency work, KRunner bridging and the action panel
@@ -21,7 +22,7 @@ are not here yet — see [Roadmap](#roadmap).
 
 | | |
 |---|---|
-| Qt | 6.6 or newer (`Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Concurrent`, `Test`) |
+| Qt | 6.6 or newer (`Core`, `Gui`, `Qml`, `Quick`, `QuickControls2`, `Concurrent`, `DBus`, `Test`) |
 | CMake | 3.21 or newer |
 | Build tool | Ninja (recommended) |
 | Compiler | GCC 11+ or Clang 14+ (C++20) |
@@ -55,84 +56,127 @@ QT_QPA_PLATFORM=offscreen ./build/kestrel --quit-after-first-frame
 
 ## Installing
 
-### 1. Run it from the build directory (simplest)
+There are two ways to get Kestrel:
 
-No installation is needed. Point your shortcut (below) at the absolute path of the binary, for
-example `/home/you/kestrel/build/kestrel --toggle`.
+- **AppImage (recommended when a successful build is available):** download a ready-to-run file
+  built by GitHub Actions. You do not need to install Qt or compile the source code.
+- **Build from source:** compile Kestrel yourself and optionally install it into your home directory.
+  This is useful for development and requires the packages listed under [Requirements](#requirements).
 
-### 2. Install into your home directory
+### AppImage: download and run
+
+GitHub Actions builds the AppImage for this project. To download the latest available build:
+
+1. Open the [Kestrel repository](https://github.com/akamusti/kestrel) on GitHub and select the
+   **Actions** tab.
+2. Select the **AppImage** workflow in the left-hand list. To start a build yourself, select
+   **Run workflow**, choose the `main` branch, then select **Run workflow** again. You can also use
+   a version tag when one is published. Manually starting a workflow requires write access to this
+   repository; otherwise, download an artifact from an existing successful run.
+3. Open a completed run with a green check mark. Under **Artifacts**, download
+   **Kestrel-AppImage**. A failed run (red X) did not produce a usable download; open it to see which
+   step failed.
+4. Extract the downloaded ZIP file. Inside it is a file ending in `.AppImage`.
+5. Move that file somewhere you can find it again, for example a new `Applications` folder in your
+   home directory. In a terminal, you can create that folder with:
+
+   ```bash
+   mkdir -p ~/Applications
+   ```
+
+6. Make the file executable and run it. Replace the filename below with the name of the file you
+   downloaded:
+
+   ```bash
+   chmod +x ~/Applications/Kestrel-*.AppImage
+   ~/Applications/Kestrel-*.AppImage
+   ```
+
+The downloaded Actions artifact is a **build download**, not a GitHub Release. It is only available
+from that workflow run and may expire according to GitHub's artifact-retention policy. To update,
+download the artifact from a newer successful run and replace the old file. The AppImage workflow
+has not completed successfully on GitHub yet, so a downloadable AppImage is not available until its
+first successful run.
+
+GitHub shows a failed run with a red X and identifies the failed step in its log. To receive
+notifications about failed runs, enable GitHub Actions notifications in your GitHub notification
+settings; the workflow does not send email on its own.
+
+### Build from source and install for your user
+
+Follow [Build from source](#build-from-source), then run these commands from the Kestrel source
+directory to install it under `~/.local`:
 
 ```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local"
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$HOME/.local"
 cmake --build build
 cmake --install build
 ```
 
-This installs:
+This installs the program, a KDE application-menu entry, and its icon. Kestrel should then appear in
+the application menu. If the `kestrel` command is not found, make sure `~/.local/bin` is in your
+`PATH`, or use the full path `~/.local/bin/kestrel`.
 
-```
-~/.local/bin/kestrel
-~/.local/share/applications/dev.kestrel.Kestrel.desktop
-~/.local/share/icons/hicolor/scalable/apps/dev.kestrel.Kestrel.svg
-```
+To install system-wide instead, configure with `-DCMAKE_INSTALL_PREFIX=/usr` and run
+`sudo cmake --install build`.
 
-Make sure `~/.local/bin` is in your `PATH` (Plasma usually adds it). Kestrel then shows up in the
-application menu, and the shortcut below can simply call `kestrel --toggle`.
-
-To install system-wide, use `-DCMAKE_INSTALL_PREFIX=/usr` and `sudo cmake --install build`.
-
-### 3. AppImage (built by GitHub Actions)
-
-The repository ships a workflow (`.github/workflows/appimage.yml`) that builds a self-contained
-AppImage on GitHub's runners, so you do not need Qt installed to run Kestrel:
-
-1. Push a tag (`git tag v0.1.0 && git push origin v0.1.0`) or start the workflow manually from the
-   **Actions** tab (**AppImage** → **Run workflow**).
-2. When it finishes, open the run and download the **Kestrel-AppImage** artifact.
-3. Unpack it, `chmod +x Kestrel-*.AppImage`, and run it:
-
-```bash
-./Kestrel-v0.1.0-x86_64.AppImage --toggle
-```
-
-The workflow has not been executed on a real runner yet — treat the first green run as the moment
-it becomes supported.
-
-### 4. Distribution packages
+### Distribution packages
 
 Not available yet. Packaging for Fedora/openSUSE/Arch follows once the feature set stabilises.
 
-## Bind a global shortcut (KDE Plasma 6)
+## Global shortcut (KDE Plasma 6)
 
-Kestrel has no in-app hotkey registration yet, so the shortcut is a normal KDE custom shortcut that
-runs `kestrel --toggle`. That works even before the app is running: the first call starts it, and
-every later call toggles the window of the already-running instance.
+You can use Kestrel's built-in shortcut or create a KDE shortcut that starts the app when it is not
+already running. The second method is recommended if you want one key to work even after logging in
+before you have opened Kestrel.
 
-1. Install Kestrel somewhere in your `PATH` (see *Installing*), or note the absolute path of the
-   binary.
-2. Open **System Settings → Shortcuts**.
-3. Click **Add New…** (bottom of the list) and choose **Command or Script…**.
-4. In the dialog:
-   - **Name**: `Kestrel`
-   - **Command or script**: `kestrel --toggle` — or the absolute path, e.g.
-     `/home/you/kestrel/build/kestrel --toggle`
-   - **Shortcut**: click **Set Shortcut**, then press the combination you want.
-5. Click **Apply**.
+#### Recommended: make a KDE shortcut that starts or toggles Kestrel
 
-Good choices: `Meta+Space` (Super+Space) or `Meta+Return`. KRunner already owns `Alt+Space` by
-default — either use a different combination or clear KRunner's shortcut in the same settings page
-under **KRunner**.
+1. First make sure Kestrel runs by opening it once. For an AppImage, open the file you downloaded;
+   for a source install, open **Kestrel** from the application menu.
+2. Open **System Settings** and select **Shortcuts** (in some Plasma versions this is under
+   **Keyboard**).
+3. Select **Add New… → Command or Script…**.
+4. Enter a name such as `Kestrel`.
+5. In **Command**, enter the full path to the app followed by `--toggle`. For example:
 
-Check that the command itself works before blaming the shortcut:
+   ```text
+   /home/alex/Applications/Kestrel.AppImage --toggle
+   ```
+
+   For a source install, use `/home/alex/.local/bin/kestrel --toggle` instead. Replace `alex` with
+   your Linux username. If the path contains spaces, put the path to the app in double quotes, for
+   example `"/home/alex/My Apps/Kestrel.AppImage" --toggle`.
+6. Select the shortcut field, press the key combination you want (for example `Meta+Space`), then
+   select **Apply**.
+7. Test it: close Kestrel, press the new shortcut to start it, then press the shortcut again to hide
+   it. The `--toggle` command starts Kestrel if it is closed and toggles the already-running instance.
+
+If Plasma reports that the key is already in use, choose another combination or change the
+conflicting shortcut. Kestrel also registers a built-in `Meta+Space` shortcut while it is running.
+Do not assign the same key to both Kestrel's built-in action and a KDE command shortcut; change one
+of them under **System Settings → Keyboard → Shortcuts** to avoid a conflict. `Alt+Space` is commonly
+used by KRunner.
+
+#### Use Kestrel's built-in shortcut
+
+Start Kestrel from the application menu or by opening the AppImage. While it is running, its
+default `Meta+Space` shortcut toggles the palette. You can change this action under **System
+Settings → Keyboard → Shortcuts → Kestrel**. If the app is closed, this built-in shortcut cannot
+start it; use the KDE command shortcut above for that.
+
+If a shortcut does not work, first check that its command starts Kestrel when run from a terminal.
+For example:
 
 ```bash
-kestrel --toggle    # shows or hides the palette
+~/Applications/Kestrel-*.AppImage --toggle
 ```
 
 Notes:
 
-- The first call after login pays the cold start (indexing); keep the palette running and later
-  toggles stay warm. Autostart entry is planned together with the D-Bus based single instance.
+- The first start after login indexes applications; later toggles stay warm while Kestrel remains
+  running.
 - The command runs as your user in your session; running it from another user or over SSH will not
   reach the running window.
 
@@ -165,7 +209,7 @@ The observation notes behind these numbers, including the KRunner D-Bus contract
 ## Roadmap
 
 1. [x] Skeleton: window, search, application list, Enter to launch
-2. [ ] Global shortcut (`kglobalaccel` over D-Bus) + single-instance toggle
+2. [x] Global shortcut (`kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
 4. [ ] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
 5. [ ] Action panel (`Ctrl+K`), filters (`Ctrl+P`), fallback web search

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Concurrent Test)
+find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Concurrent DBus Test)
 
 include(GNUInstallDirs)
 
@@ -26,10 +26,12 @@ qt_add_library(kestrel_core STATIC
     src/searchmodel.h
     src/launcher.cpp
     src/launcher.h
+    src/kglobalaccelclient.cpp
+    src/kglobalaccelclient.h
 )
 
 target_include_directories(kestrel_core PUBLIC src)
-target_link_libraries(kestrel_core PUBLIC Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concurrent)
+target_link_libraries(kestrel_core PUBLIC Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concurrent Qt6::DBus)
 
 # QML files must live at the module root so `loadFromModule("Kestrel", "Main")` resolves.
 # Aliases have to be set before qt_add_qml_module() reads the sources.

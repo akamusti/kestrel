@@ -22,6 +22,7 @@ hands off the keys."*
 |---|---|---|
 | Language | C++20 | `CMAKE_CXX_EXTENSIONS OFF` |
 | UI | Qt 6.11 + QML (Qt Quick, Qt Quick Controls "Basic") | Kirigami optional, not a dependency yet |
+| IPC | QtDBus | KDE KGlobalAccel global shortcut |
 | Build | CMake ≥ 3.21 + Ninja | uses `qt_add_qml_module` |
 | Test | Qt Test | `ctest` |
 | Platform | KDE Plasma 6, Wayland | KF6 libraries are a later optional layer |
@@ -128,7 +129,7 @@ QML:
 ## 9. Roadmap (ordered)
 
 1. [x] Skeleton: window, search, application list, Enter to launch
-2. [ ] Global shortcut (KDE `kglobalaccel` over D-Bus) + single-instance toggle
+2. [x] Global shortcut (KDE `kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
 4. [ ] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
 5. [ ] Action panel (Ctrl+K), filters (Ctrl+P), fallback web search
@@ -149,3 +150,19 @@ Stay inside this order. If a change jumps the queue, justify it in the commit bo
 5. If a change affects the performance budget, report the measurement command and result.
 6. Never add a dependency silently; call out `CMakeLists.txt` changes in the report.
 7. Never mark something as done when it is not; say plainly what is unfinished.
+8. AppImage packages are built by the repository's GitHub Actions workflow, not by an unverified
+   local packaging substitute. When starting an AppImage workflow, check its run to completion;
+   report failures and the failing step to the user, and do not claim an AppImage is available until
+   the run succeeds and uploads its artifact.
+9. Before finishing every code change, review the changed files and final diff for credentials,
+   access tokens, API secrets, and personal data. Never commit real secrets or unnecessary personal
+   data. Put required local credentials in an ignored `.env` file, provide only placeholder values
+   in `.env.example`, and read secrets from the environment at runtime; remove or anonymize personal
+   data rather than moving it into `.env`.
+10. When asked to commit and push, use an English Conventional Commit message and push the verified
+    change to the configured GitHub remote. Include this trailer in every commit unless the user
+    explicitly opts out:
+
+    ```text
+    Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+    ```

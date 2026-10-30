@@ -9,6 +9,7 @@
 #include <QTimer>
 
 #include "iconimageprovider.h"
+#include "kglobalaccelclient.h"
 
 namespace {
 
@@ -81,6 +82,11 @@ int main(int argc, char *argv[])
             QObject::connect(socket, &QLocalSocket::disconnected, socket, &QLocalSocket::deleteLater);
         }
     });
+
+    auto *globalAccel = new kestrel::KGlobalAccelClient(&app);
+    QObject::connect(globalAccel, &kestrel::KGlobalAccelClient::toggleRequested, root,
+                     [root] { QMetaObject::invokeMethod(root, "toggle"); });
+    globalAccel->registerToggleShortcut();
 
     const QString grabPath = parser.value(QStringLiteral("grab"));
     if (!grabPath.isEmpty()) {

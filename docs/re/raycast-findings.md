@@ -66,9 +66,9 @@ macOS 26), translucent body (`40%` alpha) over compositor blur.
 **Decision:** fixed 760×560 window; the panel fills it, so the silhouette never jumps while typing
 (animating the window size on Wayland is janky). Results beyond the visible rows scroll inside the
 list. Translucency and a hairline border are in; KWin blur is **not yet** (needs a KWin effect/wayland
-protocol; on the roadmap). Single instance uses `QLocalServer`; migration to D-Bus happens together
-with the global shortcut. The slide-in uses only `transform` + `opacity` (composite-only) over
-110–140 ms, per the animation rule in `AGENTS.md`.
+protocol; on the roadmap). Single instance uses `QLocalServer`; KGlobalAccel handles only the global
+shortcut over D-Bus, keeping the process handoff local and small. The slide-in uses only `transform`
+and `opacity` (composite-only) over 110–140 ms, per the animation rule in `AGENTS.md`.
 
 ## 3. Shortcuts
 
@@ -148,7 +148,8 @@ Next step: a `KRunnerClient` (`QDBusInterface`, ~120 ms timeout, cancellable req
   no exact counterpart in our narrowed model. If real-world ordering diverges, go back to S1 §4.5 and
   port it verbatim.
 - The `frecency_date` epoch (Unix vs 2001) is not settled in S1; Kestrel uses Unix seconds.
-- KWin blur and `kglobalaccel` integration wait for the KF6 development packages.
+- KWin blur still needs a KWin effect/Wayland protocol. KGlobalAccel registration uses QtDBus
+  directly, so the core does not require KF6 development packages.
 - REA was installed here **without an analysis engine** (no Ghidra/IDA/JADX): the MCP server is
   connected and lists 229 tools, but ELF decompilation returns `provider_unavailable`. The KRunner
   `.so` metadata was therefore read with `objcopy` + a CBOR decoder; deep decompilation would need
