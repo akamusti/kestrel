@@ -4,7 +4,6 @@
 #include <QDBusInterface>
 #include <QObject>
 #include <QStringList>
-#include <QVariantMap>
 
 class QDBusPendingCallWatcher;
 
@@ -24,7 +23,8 @@ signals:
     void toggleRequested();
 
 private slots:
-    void handleShortcutPressed(const QString &actionId, const QVariantMap &options);
+    void handleShortcutPressed(const QString &componentUnique, const QString &actionUnique,
+                               qlonglong timestamp);
 
 private:
     void registerComponent();

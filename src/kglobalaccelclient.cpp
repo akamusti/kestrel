@@ -16,6 +16,7 @@ constexpr auto kInterfaceName = "org.kde.KGlobalAccel";
 constexpr auto kComponentInterfaceName = "org.kde.kglobalaccel.Component";
 constexpr auto kComponentUniqueName = "Kestrel";
 constexpr auto kActionUniqueName = "togglePalette";
+constexpr auto kPressedSignalName = "globalShortcutPressed";
 constexpr uint kSetPresentFlag = 1U << 1;
 constexpr uint kIsDefaultFlag = 1U << 3;
 
@@ -97,8 +98,8 @@ void KGlobalAccelClient::connectComponent(const QString &objectPath)
 {
     const bool connected = m_bus.connect(
         QString::fromLatin1(kServiceName), objectPath,
-        QString::fromLatin1(kComponentInterfaceName), QStringLiteral("pressed"), this,
-        SLOT(handleShortcutPressed(QString,QVariantMap)));
+        QString::fromLatin1(kComponentInterfaceName), QString::fromLatin1(kPressedSignalName), this,
+        SLOT(handleShortcutPressed(QString,QString,qlonglong)));
     if (!connected) {
         qWarning("KGlobalAccel signal connection failed; the global shortcut is inactive");
         m_accelInterface.asyncCall(QStringLiteral("setInactive"), m_actionId);
@@ -156,11 +157,12 @@ void KGlobalAccelClient::setDefaultShortcut()
             });
 }
 
-void KGlobalAccelClient::handleShortcutPressed(const QString &actionId,
-                                               const QVariantMap &options)
+void KGlobalAccelClient::handleShortcutPressed(const QString &componentUnique,
+                                               const QString &actionUnique, qlonglong timestamp)
 {
-    Q_UNUSED(options);
-    if (actionId == QString::fromLatin1(kActionUniqueName)) {
+    Q_UNUSED(timestamp);
+    if (componentUnique == QString::fromLatin1(kComponentUniqueName)
+        && actionUnique == QString::fromLatin1(kActionUniqueName)) {
         emit toggleRequested();
     }
 }

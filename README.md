@@ -85,8 +85,8 @@ attaches the AppImage if every step succeeds. To install the latest published ve
    it. Replace the filename below with the exact name you downloaded:
 
    ```bash
-   chmod +x ~/Applications/Kestrel-v0.2.1-x86_64.AppImage
-   ~/Applications/Kestrel-v0.2.1-x86_64.AppImage
+   chmod +x ~/Applications/Kestrel-v0.2.2-x86_64.AppImage
+   ~/Applications/Kestrel-v0.2.2-x86_64.AppImage
    ```
 
 To update, download the AppImage from a newer release and replace the old file. You do not need Qt

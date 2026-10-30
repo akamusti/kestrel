@@ -243,11 +243,16 @@ void TestCore::globalShortcutIgnoresUnrelatedActions()
 {
     KGlobalAccelClient client;
     QSignalSpy toggleSpy(&client, &KGlobalAccelClient::toggleRequested);
-    const QVariantMap options;
+    constexpr qlonglong timestamp = 0;
 
     QVERIFY(QMetaObject::invokeMethod(
         &client, "handleShortcutPressed", Qt::DirectConnection,
-        Q_ARG(QString, QStringLiteral("anotherAction")), Q_ARG(QVariantMap, options)));
+        Q_ARG(QString, QStringLiteral("Kestrel")),
+        Q_ARG(QString, QStringLiteral("anotherAction")), Q_ARG(qlonglong, timestamp)));
+    QVERIFY(QMetaObject::invokeMethod(
+        &client, "handleShortcutPressed", Qt::DirectConnection,
+        Q_ARG(QString, QStringLiteral("anotherComponent")),
+        Q_ARG(QString, QStringLiteral("togglePalette")), Q_ARG(qlonglong, timestamp)));
     QCOMPARE(toggleSpy.count(), 0);
 }
 
@@ -255,11 +260,12 @@ void TestCore::globalShortcutRequestsPaletteToggle()
 {
     KGlobalAccelClient client;
     QSignalSpy toggleSpy(&client, &KGlobalAccelClient::toggleRequested);
-    const QVariantMap options;
+    constexpr qlonglong timestamp = 0;
 
     QVERIFY(QMetaObject::invokeMethod(
         &client, "handleShortcutPressed", Qt::DirectConnection,
-        Q_ARG(QString, QStringLiteral("togglePalette")), Q_ARG(QVariantMap, options)));
+        Q_ARG(QString, QStringLiteral("Kestrel")),
+        Q_ARG(QString, QStringLiteral("togglePalette")), Q_ARG(qlonglong, timestamp)));
     QCOMPARE(toggleSpy.count(), 1);
 }
 
