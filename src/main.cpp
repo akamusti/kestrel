@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Kestrel"));
     QGuiApplication::setOrganizationName(QStringLiteral("Kestrel"));
     QGuiApplication::setOrganizationDomain(QStringLiteral("kestrel.dev"));
-    QGuiApplication::setApplicationVersion(QStringLiteral("0.2.0"));
+    QGuiApplication::setApplicationVersion(QStringLiteral("0.2.1"));
     QGuiApplication::setDesktopFileName(QStringLiteral("dev.kestrel.Kestrel"));
     QGuiApplication::setWindowIcon(QIcon::fromTheme(QStringLiteral("system-search")));
 

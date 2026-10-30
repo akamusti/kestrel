@@ -23,8 +23,8 @@ Window {
     title: qsTr("Kestrel")
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
 
-    x: Math.round((Screen.width - width) / 2)
-    y: Math.round(Screen.height * 0.18)
+    x: Screen.virtualX + Math.round((Screen.width - width) / 2)
+    y: Screen.virtualY + Math.round((Screen.height - height) / 2)
 
     function toggle() {
         if (root.visible) {
