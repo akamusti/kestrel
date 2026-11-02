@@ -23,5 +23,10 @@ clangd/
 *.swp
 *~
 
+# Local secrets (never commit)
+.env
+.env.*
+!.env.example
+
 # Runtime state
 .kestrel/

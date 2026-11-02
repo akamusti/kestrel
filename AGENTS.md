@@ -60,6 +60,7 @@ src/
   main.cpp              # QGuiApplication, style, image provider, QML loading, single instance
   desktopentry.{h,cpp}  # .desktop parsing, XDG scan, Exec field codes
   appindex.{h,cpp}      # application index: background scan, entry list for QML
+  calculator.{h,cpp}    # inline arithmetic, unit conversion and date/time queries
   ranker.{h,cpp}        # fuzzy matcher, thresholds, frecency, search-term tiers
   usagestore.{h,cpp}    # frecency anchors, learned terms, aliases (QSettings, deferred flush)
   searchmodel.{h,cpp}   # query -> ranked results (sections) + launch()
@@ -69,6 +70,8 @@ qml/
   Main.qml              # window, search bar, list, shortcuts, footer
   ResultDelegate.qml    # single result row
   ShortcutHint.qml      # footer key-cap chip
+  ActionPanel.qml       # Ctrl+K overlay list
+  Toast.qml             # transient "Copied" confirmation
 tests/
   tst_core.cpp          # matcher, threshold, frecency and .desktop parsing tests
 ```
@@ -132,8 +135,8 @@ QML:
 2. [x] Global shortcut (KDE `kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
 4. [x] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
-5. [ ] Action panel (Ctrl+K), filters (Ctrl+P), fallback web search
-6. [ ] Calculator / unit / date inline results
+5. [x] Action panel (Ctrl+K), filters (Ctrl+P), fallback web search
+6. [x] Calculator / unit / date inline results
 7. [ ] File search (Baloo/`kio` or an `fd` subprocess)
 8. [ ] Clipboard history and snippets
 9. [ ] Extension API (Raycast-shaped manifest, JSON-RPC process runtime)
@@ -154,11 +157,18 @@ Stay inside this order. If a change jumps the queue, justify it in the commit bo
    local packaging substitute. When starting an AppImage workflow, check its run to completion;
    report failures and the failing step to the user, and do not claim an AppImage is available until
    the run succeeds and uploads its artifact.
-9. Before finishing every code change, review the changed files and final diff for credentials,
-   access tokens, API secrets, and personal data. Never commit real secrets or unnecessary personal
-   data. Put required local credentials in an ignored `.env` file, provide only placeholder values
-   in `.env.example`, and read secrets from the environment at runtime; remove or anonymize personal
-   data rather than moving it into `.env`.
+9. **Secret and personal-data gate — run it at the end of every change, before `git add`, commit and
+   push.** Scan the changed files and the complete diff, including untracked files, for:
+   tokens, API keys, passwords, private keys, cookies, session/refresh tokens, webhooks and DSNs;
+   and for personal data such as real names, e-mail addresses, phone numbers, home addresses,
+   absolute `/home/<user>` paths, machine names, or logs and screenshots containing them.
+
+   Never commit real secrets or unnecessary personal data. If a required secret is found:
+   remove it from the source and read it from the environment at runtime; make sure `.env` is
+   ignored by `.gitignore`; keep the real values only in the local, ignored `.env`; and add or
+   refresh `.env.example` with placeholder values and the variable names. If personal data is
+   found, remove or anonymize it rather than moving it into `.env`. Do not commit or push while
+   the scan still reports a finding, and state the scan result in the handback.
 10. When asked to commit and push, use an English Conventional Commit message and push the verified
     change to the configured GitHub remote. Include this trailer in every commit unless the user
     explicitly opts out:
