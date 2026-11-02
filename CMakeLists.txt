@@ -16,6 +16,8 @@ qt_standard_project_setup()
 qt_add_library(kestrel_core STATIC
     src/autostartmanager.cpp
     src/autostartmanager.h
+    src/calculator.cpp
+    src/calculator.h
     src/desktopentry.cpp
     src/desktopentry.h
     src/appindex.cpp
@@ -42,6 +44,8 @@ target_link_libraries(kestrel_core PUBLIC Qt6::Core Qt6::Gui Qt6::Qml Qt6::Concu
 set_source_files_properties(qml/Main.qml PROPERTIES QT_RESOURCE_ALIAS Main.qml)
 set_source_files_properties(qml/ResultDelegate.qml PROPERTIES QT_RESOURCE_ALIAS ResultDelegate.qml)
 set_source_files_properties(qml/ShortcutHint.qml PROPERTIES QT_RESOURCE_ALIAS ShortcutHint.qml)
+set_source_files_properties(qml/ActionPanel.qml PROPERTIES QT_RESOURCE_ALIAS ActionPanel.qml)
+set_source_files_properties(qml/Toast.qml PROPERTIES QT_RESOURCE_ALIAS Toast.qml)
 
 qt_add_qml_module(kestrel_core
     URI Kestrel
@@ -51,6 +55,8 @@ qt_add_qml_module(kestrel_core
         qml/Main.qml
         qml/ResultDelegate.qml
         qml/ShortcutHint.qml
+        qml/ActionPanel.qml
+        qml/Toast.qml
 )
 
 qt_add_executable(kestrel

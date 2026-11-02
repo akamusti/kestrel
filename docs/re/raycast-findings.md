@@ -88,7 +88,7 @@ and `opacity` (composite-only) over 110–140 ms, per the animation rule in `AGE
 | Navigation bindings | Emacs (Ctrl B/F/P/N, default) or Vim (Ctrl H/L/K/J) |
 
 **Decision:** the first cut implements ↵, ↑↓, Ctrl 1–9, Ctrl⇧C, Esc, ⇧Esc and Ctrl R (reload);
-the Ctrl K action panel and Ctrl P filter follow next (roadmap §9.5).
+the Ctrl K action panel, Ctrl P source filter and web-search fallback landed with roadmap §9.5.
 
 ## 4. Extension API (manifest)
 

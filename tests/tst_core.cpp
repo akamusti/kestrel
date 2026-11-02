@@ -3,11 +3,13 @@
 #include <QDBusMetaType>
 #include <QDir>
 #include <QFile>
+#include <QLocale>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 
 #include "autostartmanager.h"
+#include "calculator.h"
 #include "desktopentry.h"
 #include "kglobalaccelclient.h"
 #include "krunnerclient.h"
@@ -66,6 +68,9 @@ private slots:
     void frecencyDecaysOverTime();
     void frecencyRewardsLaunches();
     void searchTermTierClassifies();
+    void calculatorEvaluatesExpressions();
+    void calculatorConvertsUnits();
+    void calculatorHandlesDates();
     void parsesDesktopEntry();
     void skipsHiddenAndNonApplicationEntries();
     void expandsExecFieldCodes();
@@ -74,6 +79,8 @@ private slots:
     void globalShortcutRequestsPaletteToggle();
     void autostartCanBeEnabledWithUserConsent();
     void autostartPromptCanBeDismissed();
+    void searchModelShowsWebFallback();
+    void searchModelFiltersResultSources();
     void parsesKRunnerDbusRunnerMetadata();
     void ignoresDisabledAndNonDbusRunners();
     void krunnerResultsAreAddedAndRunOverDbus();
@@ -154,6 +161,125 @@ void TestCore::searchTermTierClassifies()
     QCOMPARE(searchTermTier(QStringLiteral("fi"), QStringLiteral("fir")), 1);
     QCOMPARE(searchTermTier(QStringLiteral("ff"), QStringLiteral("chrom")), 0);
     QCOMPARE(searchTermTier(QString(), QStringLiteral("ff")), 0);
+}
+
+void TestCore::calculatorEvaluatesExpressions()
+{
+    const QDateTime now(QDate(2026, 11, 2), QTime(15, 30));
+
+    CalculatorResult result = evaluateCalculator(QStringLiteral("2 + 3 * 4"), now);
+    QVERIFY(result.isValid());
+    QCOMPARE(result.kind, CalculatorResult::Kind::Expression);
+    QCOMPARE(result.title, QStringLiteral("14"));
+    QCOMPARE(result.value, QStringLiteral("14"));
+
+    result = evaluateCalculator(QStringLiteral("(1 + 2) ^ 3"), now);
+    QCOMPARE(result.title, QStringLiteral("27"));
+
+    result = evaluateCalculator(QStringLiteral("20% of 50"), now);
+    QCOMPARE(result.title, QStringLiteral("10"));
+
+    result = evaluateCalculator(QStringLiteral("sqrt(81)"), now);
+    QCOMPARE(result.title, QStringLiteral("9"));
+
+    // A bare number is not an expression: typing "42" should not hijack the result list.
+    QVERIFY(!evaluateCalculator(QStringLiteral("42"), now).isValid());
+    QVERIFY(!evaluateCalculator(QStringLiteral("firefox"), now).isValid());
+    QVERIFY(!evaluateCalculator(QString(), now).isValid());
+}
+
+void TestCore::calculatorConvertsUnits()
+{
+    const QDateTime now(QDate(2026, 11, 2), QTime(15, 30));
+
+    CalculatorResult result = evaluateCalculator(QStringLiteral("10 km to mi"), now);
+    QVERIFY(result.isValid());
+    QCOMPARE(result.kind, CalculatorResult::Kind::Conversion);
+    QCOMPARE(result.value, QStringLiteral("6.2137119224"));
+    QCOMPARE(result.title, QStringLiteral("6.2137119224 mi"));
+
+    result = evaluateCalculator(QStringLiteral("100 c to f"), now);
+    QCOMPARE(result.value, QStringLiteral("212"));
+    QCOMPARE(result.title, QStringLiteral("212 °F"));
+
+    // Units may touch the number ("10km") and the keyword may be "in".
+    result = evaluateCalculator(QStringLiteral("1kg in g"), now);
+    QCOMPARE(result.value, QStringLiteral("1000"));
+
+    QVERIFY(!evaluateCalculator(QStringLiteral("10 km to kg"), now).isValid());
+    QVERIFY(!evaluateCalculator(QStringLiteral("10 zz to mi"), now).isValid());
+}
+
+void TestCore::calculatorHandlesDates()
+{
+    const QDateTime now(QDate(2026, 11, 2), QTime(15, 30));
+
+    const CalculatorResult today = evaluateCalculator(QStringLiteral("today"), now);
+    QVERIFY(today.isValid());
+    QCOMPARE(today.kind, CalculatorResult::Kind::DateTime);
+    QCOMPARE(today.value, QLocale().toString(QDate(2026, 11, 2), QLocale::LongFormat));
+
+    const CalculatorResult tomorrow = evaluateCalculator(QStringLiteral("tomorrow"), now);
+    QCOMPARE(tomorrow.value, QLocale().toString(QDate(2026, 11, 3), QLocale::LongFormat));
+
+    const CalculatorResult friday = evaluateCalculator(QStringLiteral("friday"), now);
+    QCOMPARE(friday.value, QLocale().toString(QDate(2026, 11, 6), QLocale::LongFormat));
+
+    const CalculatorResult later = evaluateCalculator(QStringLiteral("in 3 hours"), now);
+    QCOMPARE(later.value,
+             QLocale().toString(now.addSecs(3 * 3600), QLocale::ShortFormat));
+
+    const CalculatorResult earlier = evaluateCalculator(QStringLiteral("2 days ago"), now);
+    QCOMPARE(earlier.value,
+             QLocale().toString(now.addDays(-2), QLocale::ShortFormat));
+}
+
+void TestCore::searchModelShowsWebFallback()
+{
+    SearchModel model;
+    model.setQuery(QStringLiteral("zzzz no local match"));
+
+    QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1, 2000);
+    const QAbstractItemModel *modelBase = &model;
+    const QModelIndex row = modelBase->index(0, 0);
+    QCOMPARE(model.data(row, SearchModel::SourceRole).toString(), QStringLiteral("web"));
+    QVERIFY(model.data(row, SearchModel::NameRole).toString().contains(
+        QStringLiteral("zzzz no local match")));
+    QVERIFY(model.data(row, SearchModel::SubtitleRole).toString().startsWith(
+        QStringLiteral("https://")));
+
+    // Filters other than "All" never show the web fallback.
+    model.setFilter(SearchModel::Filter::Applications);
+    QCOMPARE(model.count(), 0);
+    model.setFilter(SearchModel::Filter::All);
+    QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1, 2000);
+}
+
+void TestCore::searchModelFiltersResultSources()
+{
+    SearchModel model;
+    model.setQuery(QStringLiteral("2 + 2"));
+
+    QCOMPARE(model.count(), 1);
+    const QAbstractItemModel *modelBase = &model;
+    const QModelIndex row = modelBase->index(0, 0);
+    QCOMPARE(model.data(row, SearchModel::SourceRole).toString(), QStringLiteral("calculator"));
+    QCOMPARE(model.data(row, SearchModel::NameRole).toString(), QStringLiteral("4"));
+    QCOMPARE(model.data(row, SearchModel::KindRole).toString(), QStringLiteral("Calculator"));
+
+    const QVariantList actions = model.actionsAt(0);
+    QCOMPARE(actions.size(), 1);
+    QCOMPARE(actions.constFirst().toMap().value(QStringLiteral("id")).toString(),
+             QStringLiteral("copy-result"));
+
+    model.setFilter(SearchModel::Filter::Applications);
+    QCOMPARE(model.count(), 0);
+
+    model.setFilter(SearchModel::Filter::Calculator);
+    QCOMPARE(model.count(), 1);
+
+    model.nextFilter();
+    QCOMPARE(model.filter(), SearchModel::Filter::All);
 }
 
 void TestCore::parsesDesktopEntry()
@@ -404,15 +530,14 @@ void TestCore::krunnerResultsAreAddedAndRunOverDbus()
     {
         SearchModel model;
         model.setQuery(QStringLiteral("calc"));
-        QTRY_COMPARE_WITH_TIMEOUT(model.count(), 1, 5000);
         const QAbstractItemModel *modelBase = &model;
-        const QModelIndex matchIndex = modelBase->index(0, 0);
-        QCOMPARE(model.data(matchIndex, SearchModel::NameRole).toString(),
+        QTRY_COMPARE_WITH_TIMEOUT(
+            model.data(modelBase->index(0, 0), SearchModel::SourceRole).toString(),
+            QStringLiteral("krunner"), 5000);
+        QCOMPARE(model.data(modelBase->index(0, 0), SearchModel::NameRole).toString(),
                  QStringLiteral("Calculator result"));
-        QCOMPARE(model.data(matchIndex, SearchModel::SubtitleRole).toString(),
+        QCOMPARE(model.data(modelBase->index(0, 0), SearchModel::SubtitleRole).toString(),
                  QStringLiteral("42"));
-        QCOMPARE(model.data(matchIndex, SearchModel::SourceRole).toString(),
-                 QStringLiteral("krunner"));
         QVERIFY(model.launch(0));
         QTRY_COMPARE_WITH_TIMEOUT(runner.runCount(), 1, 5000);
     }

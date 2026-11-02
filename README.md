@@ -14,11 +14,13 @@ how fast it answers a keystroke (**≤ 16 ms**, one frame). Everything else is n
 - Frecency and learned search terms persist between launches.
 - Installed KRunner D-Bus runners provide asynchronous results for apps, calculations, windows,
   units and other Plasma runner features.
+- Inline calculator, unit conversion and date/time results (`2+3*4`, `10 km to mi`, `today`).
+- `Ctrl+K` action panel, `Ctrl+P` source filters, and a web-search fallback when nothing matches.
 - KDE global shortcut: `Meta+Space` toggles the running palette through KGlobalAccel.
 - Single instance: a second launch toggles the running window instead of starting a new one.
 
-Status: early. Applications launch, ranking, frecency and KRunner D-Bus results work; see the
-[Roadmap](#roadmap) for what's next.
+Status: early. Applications launch, ranking, frecency, KRunner, inline results, actions and filters
+work; see the [Roadmap](#roadmap) for what's next.
 
 ## Requirements
 
@@ -183,11 +185,13 @@ Notes:
 
 | Key | Action |
 |---|---|
-| Type | Filter applications |
+| Type | Filter applications and commands |
 | `↑` `↓` | Move selection |
 | `PageUp` `PageDown` | Jump a page |
-| `Enter` | Launch the selected application |
+| `Enter` | Launch the selected result (calculator results are copied) |
 | `Ctrl+1` … `Ctrl+9` | Launch the n-th result directly |
+| `Ctrl+K` | Action panel for the selected result |
+| `Ctrl+P` | Cycle result sources (All → Applications → KRunner → Calculator) |
 | `Ctrl+Shift+C` | Copy the selected name |
 | `Esc` | Clear the query, or close when it is empty |
 | `Shift+Esc` | Close and reset |
@@ -205,14 +209,34 @@ associated with it for 17 days, so `ff` keeps meaning Firefox.
 The observation notes behind these numbers, including the KRunner D-Bus contracts, live in
 [`docs/re/raycast-findings.md`](docs/re/raycast-findings.md).
 
+## Inline results, actions and the web fallback
+
+Kestrel answers common queries locally, without an extension or a D-Bus round trip:
+
+| Query | Result |
+|---|---|
+| `2 + 3 * 4`, `(1+2)^3`, `sqrt(81)` | Arithmetic, with `mod`, `%`, `of` and the usual functions |
+| `10 km to mi`, `100 c to f`, `1 kg in g` | Unit conversion: length, mass, data, time, volume, speed, temperature |
+| `today`, `tomorrow`, `friday`, `in 3 hours`, `2 days ago` | Date and time |
+
+`Ctrl+K` opens the action panel for the selected row: open it, copy the name, desktop ID, command
+or URL, or open an application's `.desktop` file. `Ctrl+P` cycles the result sources so KRunner or
+local calculator results can be isolated. When a query has no local result, Kestrel offers to search
+the web. The default engine is DuckDuckGo; set `web/searchUrl` (with a `%1` placeholder) in
+`~/.config/Kestrel/kestrel.conf` to use another one.
+
+Inline results are computed in C++ on the search path, so they never wait for a runner or touch the
+disk. The web fallback appears after a short grace period, so it does not flash for queries that
+KRunner is about to answer.
+
 ## Roadmap
 
 1. [x] Skeleton: window, search, application list, Enter to launch
 2. [x] Global shortcut (`kglobalaccel` over D-Bus) + single-instance toggle
 3. [x] Frecency + learned search terms (persisted, deferred flush)
 4. [x] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
-5. [ ] Action panel (`Ctrl+K`), filters (`Ctrl+P`), fallback web search
-6. [ ] Calculator / unit / date inline results
+5. [x] Action panel (`Ctrl+K`), filters (`Ctrl+P`), fallback web search
+6. [x] Calculator / unit / date inline results
 7. [ ] File search (Baloo or an `fd` subprocess)
 8. [ ] Clipboard history and snippets
 9. [ ] Extension API (Raycast-shaped manifest, JSON-RPC process runtime)

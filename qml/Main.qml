@@ -42,8 +42,37 @@ Window {
         if (results.count === 0)
             return
         const row = Math.max(0, list.currentIndex)
-        results.launch(row)
-        root.hide()
+        const source = results.sourceAt(row)
+        if (!results.launch(row))
+            return
+        if (source === "calculator") {
+            toast.show(qsTr("Copied"))
+        } else {
+            root.hide()
+        }
+    }
+
+    function openActions() {
+        if (results.count === 0)
+            return
+        actionPanel.items = results.actionsAt(Math.max(0, list.currentIndex))
+        actionPanel.currentIndex = 0
+        actionPanel.visible = actionPanel.items.length > 0
+    }
+
+    function runAction(actionIndex) {
+        const action = actionPanel.items[actionIndex]
+        if (!action)
+            return
+        const row = Math.max(0, list.currentIndex)
+        actionPanel.visible = false
+        if (!results.runAction(row, action.id))
+            return
+        if (action.id.startsWith("copy")) {
+            toast.show(qsTr("Copied"))
+        } else {
+            root.hide()
+        }
     }
 
     function resetQuery() {
@@ -75,6 +104,8 @@ Window {
         id: results
         index: appIndex
         query: searchField.text
+
+        onFilterChanged: list.currentIndex = results.count > 0 ? 0 : -1
     }
 
     AutostartManager {
@@ -187,6 +218,7 @@ Window {
             TextField {
                 id: searchField
                 width: header.width - 40 - 18 - header.spacing
+                       - (filterChip.visible ? filterChip.width + header.spacing : 0)
                 height: header.height
                 anchors.verticalCenter: parent.verticalCenter
                 focus: true
@@ -198,9 +230,38 @@ Window {
                 background: null
                 padding: 0
 
-                onTextChanged: list.currentIndex = results.count > 0 ? 0 : -1
+                onTextChanged: {
+                    actionPanel.visible = false
+                    list.currentIndex = results.count > 0 ? 0 : -1
+                }
 
                 Keys.onPressed: (event) => {
+                    if (actionPanel.visible) {
+                        if (event.key === Qt.Key_Down) {
+                            actionPanel.currentIndex = Math.min(actionPanel.items.length - 1,
+                                                                actionPanel.currentIndex + 1)
+                            event.accepted = true
+                            return
+                        }
+                        if (event.key === Qt.Key_Up) {
+                            actionPanel.currentIndex = Math.max(0, actionPanel.currentIndex - 1)
+                            event.accepted = true
+                            return
+                        }
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            root.runAction(actionPanel.currentIndex)
+                            event.accepted = true
+                            return
+                        }
+                        if (event.key === Qt.Key_Escape
+                                || (event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier))) {
+                            actionPanel.visible = false
+                            event.accepted = true
+                            return
+                        }
+                        actionPanel.visible = false
+                    }
+
                     if (event.key === Qt.Key_Down) {
                         if (list.currentIndex < results.count - 1)
                             list.currentIndex += 1
@@ -232,17 +293,48 @@ Window {
                             root.activateCurrent()
                         }
                         event.accepted = true
+                    } else if (event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier)) {
+                        root.openActions()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
+                        results.nextFilter()
+                        event.accepted = true
                     } else if (event.key === Qt.Key_R && (event.modifiers & Qt.ControlModifier)) {
                         appIndex.reload()
                         event.accepted = true
                     } else if (event.key === Qt.Key_C
                                && (event.modifiers & Qt.ControlModifier)
                                && (event.modifiers & Qt.ShiftModifier)) {
-                        clipboardHelper.text = results.nameAt(list.currentIndex)
-                        clipboardHelper.selectAll()
-                        clipboardHelper.copy()
+                        if (results.runAction(list.currentIndex, "copy-name"))
+                            toast.show(qsTr("Copied"))
                         event.accepted = true
                     }
+                }
+            }
+
+            Rectangle {
+                id: filterChip
+                anchors.verticalCenter: parent.verticalCenter
+                width: visible ? filterChipLabel.implicitWidth + 18 : 0
+                height: 22
+                radius: 11
+                visible: results.filterActive
+                color: "#1affffff"
+                border.width: 1
+                border.color: "#22ffffff"
+
+                Text {
+                    id: filterChipLabel
+                    anchors.centerIn: parent
+                    text: results.filterLabel
+                    color: "#c9c9d1"
+                    font.pixelSize: 10
+                    font.bold: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: results.nextFilter()
                 }
             }
         }
@@ -253,13 +345,6 @@ Window {
             height: 1
             anchors.top: header.bottom
             color: "#1affffff"
-        }
-
-        TextEdit {
-            id: clipboardHelper
-            visible: false
-            width: 0
-            height: 0
         }
 
         ListView {
@@ -282,7 +367,10 @@ Window {
                     anchors.leftMargin: 22
                     anchors.verticalCenter: parent.verticalCenter
                     text: section === "suggestions" ? qsTr("SUGGESTIONS")
-                          : section === "krunner" ? qsTr("KRUNNER") : qsTr("RESULTS")
+                          : section === "calculator" ? qsTr("CALCULATOR")
+                          : section === "krunner" ? qsTr("KRUNNER")
+                          : section === "web" ? qsTr("WEB")
+                          : qsTr("RESULTS")
                     color: "#7a7a85"
                     font.pixelSize: 10
                     font.letterSpacing: 0.8
@@ -304,10 +392,31 @@ Window {
                 visible: results.count === 0
                 text: appIndex.loading ? qsTr("Indexing applications…")
                                        : root.hasQuery ? qsTr("No results for “%1”").arg(searchField.text)
-                                                       : qsTr("No applications found")
+                                       : results.filterActive ? qsTr("Nothing in %1").arg(results.filterLabel)
+                                                              : qsTr("No applications found")
                 color: "#7a7a85"
                 font.pixelSize: 14
             }
+        }
+
+        ActionPanel {
+            id: actionPanel
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: footer.top
+            anchors.leftMargin: 12
+            anchors.rightMargin: 12
+            anchors.bottomMargin: 8
+            title: qsTr("ACTIONS")
+            visible: false
+            onActivated: (index) => root.runAction(index)
+        }
+
+        Toast {
+            id: toast
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: footer.top
+            anchors.bottomMargin: 12
         }
 
         Rectangle {
@@ -330,6 +439,14 @@ Window {
                 ShortcutHint {
                     keys: "↵"
                     label: qsTr("Open")
+                }
+                ShortcutHint {
+                    keys: "ctrl K"
+                    label: qsTr("Actions")
+                }
+                ShortcutHint {
+                    keys: "ctrl P"
+                    label: qsTr("Filter")
                 }
                 ShortcutHint {
                     keys: "esc"
