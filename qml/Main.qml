@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Window
 import Kestrel
+import org.kde.layershell 1.0 as LayerShell
 
 Window {
     id: root
@@ -22,6 +23,12 @@ Window {
     color: "transparent"
     title: qsTr("Kestrel")
     flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+
+    LayerShell.Window.layer: LayerShell.Window.LayerOverlay
+    LayerShell.Window.anchors: LayerShell.Window.AnchorNone
+    LayerShell.Window.keyboardInteractivity: LayerShell.Window.KeyboardInteractivityExclusive
+    LayerShell.Window.activateOnShow: true
+    LayerShell.Window.wantsToBeOnActiveScreen: true
 
     x: Screen.virtualX + Math.round((Screen.width - width) / 2)
     y: Screen.virtualY + Math.round((Screen.height - height) / 2)
