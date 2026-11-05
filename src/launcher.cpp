@@ -1,9 +1,32 @@
 #include "launcher.h"
 
 #include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QProcess>
+#include <QProcessEnvironment>
 
 namespace kestrel {
+
+namespace {
+/// Index of the actual program inside an expanded command that may be wrapped in
+/// `env VAR=value ...`. Returns -1 when no program could be found.
+int programIndex(const QStringList &command)
+{
+    int index = 0;
+    if (index < command.size() && QFileInfo(command.at(index)).fileName() == QLatin1String("env")) {
+        ++index;
+    }
+    while (index < command.size()) {
+        const QString &token = command.at(index);
+        if (token.startsWith(u'/') || !token.contains(u'=')) {
+            break;
+        }
+        ++index;
+    }
+    return (index < command.size()) ? index : -1;
+}
+} // namespace
 
 bool launch(const DesktopEntry &entry)
 {
@@ -12,13 +35,48 @@ bool launch(const DesktopEntry &entry)
         return false;
     }
 
-    const QString program = command.constFirst();
-    QStringList arguments = command.mid(1);
+    const int index = programIndex(command);
+    if (index < 0) {
+        return false;
+    }
+
+    const QString program = command.at(index);
+    const QStringList arguments = command.mid(index + 1);
+
+    // Carry over any `VAR=value` assignments that preceded the program.
+    QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+    int envIndex = 0;
+    if (envIndex < command.size() && QFileInfo(command.at(envIndex)).fileName() == QLatin1String("env")) {
+        ++envIndex;
+    }
+    while (envIndex < index) {
+        const QString &token = command.at(envIndex);
+        const qsizetype eq = token.indexOf(u'=');
+        if (eq > 0) {
+            environment.insert(token.left(eq), token.mid(eq + 1));
+        }
+        ++envIndex;
+    }
+
+    // AppImages are sometimes shipped without the executable bit; fix that lazily
+    // so launching does not silently fail.
+    const QFileInfo programInfo(program);
+    if (programInfo.exists() && !programInfo.isExecutable()) {
+        QFile::setPermissions(program,
+                              programInfo.permissions() | QFileDevice::ExeUser
+                                  | QFileDevice::ExeGroup | QFileDevice::ExeOther);
+    }
+
+    QProcess process;
+    process.setProgram(program);
+    process.setArguments(arguments);
+    process.setProcessEnvironment(environment);
 
     if (!entry.workingDir.isEmpty() && QDir(entry.workingDir).exists()) {
-        return QProcess::startDetached(program, arguments, entry.workingDir);
+        process.setWorkingDirectory(entry.workingDir);
     }
-    return QProcess::startDetached(program, arguments);
+
+    return process.startDetached();
 }
 
 bool terminate(const DesktopEntry &entry)
@@ -29,7 +87,11 @@ bool terminate(const DesktopEntry &entry)
         if (command.isEmpty()) {
             return false;
         }
-        binary = QFileInfo(command.constFirst()).fileName();
+        const int index = programIndex(command);
+        if (index < 0) {
+            return false;
+        }
+        binary = QFileInfo(command.at(index)).fileName();
     }
     return QProcess::startDetached(QStringLiteral("pkill"), {QStringLiteral("-f"), binary});
 }

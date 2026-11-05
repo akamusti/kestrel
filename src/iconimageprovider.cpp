@@ -4,6 +4,7 @@
 #include <QIcon>
 #include <QPainter>
 #include <QPixmap>
+#include <QUrl>
 
 namespace kestrel {
 namespace {
@@ -40,10 +41,20 @@ QPixmap IconImageProvider::requestPixmap(const QString &id, QSize *size, const Q
     const int width = requestedSize.width() > 0 ? requestedSize.width() : kDefaultSize;
     const int height = requestedSize.height() > 0 ? requestedSize.height() : kDefaultSize;
 
+    // QML passes the icon name through encodeURIComponent(), so absolute paths arrive
+    // percent-encoded (e.g. "%2Fhome%2F..."). Decode first so file-based icons resolve.
+    const QString decoded = QUrl::fromPercentEncoding(id.toUtf8());
+    const QString candidate = decoded.isEmpty() ? id : decoded;
+
     QPixmap pixmap;
-    if (id.startsWith(u'/') && QFileInfo::exists(id)) {
+    if (candidate.startsWith(u'/') && QFileInfo::exists(candidate)) {
+        pixmap = QPixmap(candidate);
+    } else if (id.startsWith(u'/') && QFileInfo::exists(id)) {
         pixmap = QPixmap(id);
-    } else if (!id.isEmpty()) {
+    } else if (!candidate.isEmpty()) {
+        pixmap = QIcon::fromTheme(candidate).pixmap(width, height);
+    }
+    if (pixmap.isNull() && !id.isEmpty() && id != candidate) {
         pixmap = QIcon::fromTheme(id).pixmap(width, height);
     }
     if (pixmap.isNull()) {
