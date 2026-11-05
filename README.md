@@ -60,44 +60,11 @@ QT_QPA_PLATFORM=offscreen ./build/kestrel --quit-after-first-frame
 
 ## Installing
 
-There are two ways to get Kestrel:
+The recommended way to install Kestrel is to **build from source**. There are no pre-built binaries
+or AppImages; compiling the source code is the supported install path.
 
-- **AppImage (recommended when a successful build is available):** download a ready-to-run file
-  built by GitHub Actions. You do not need to install Qt or compile the source code.
-- **Build from source:** compile Kestrel yourself and optionally install it into your home directory.
-  This is useful for development and requires the packages listed under [Requirements](#requirements).
-
-### AppImage: download and run
-
-For each version tag, GitHub Actions builds and tests Kestrel, then creates a GitHub Release and
-attaches the AppImage if every step succeeds. To install the latest published version:
-
-1. Open [Kestrel Releases](https://github.com/akamusti/kestrel/releases).
-2. Open the latest version and download the file ending in `.AppImage` under **Assets**. If no
-   release is listed yet, the first build may still be running or may have failed; check the
-   repository's **Actions → AppImage** page for its status.
-3. Make an `Applications` folder in your home directory if you do not already have one. In a
-   terminal, run:
-
-   ```bash
-   mkdir -p ~/Applications
-   ```
-
-4. Move the downloaded AppImage into `~/Applications`. In a terminal, make it executable and run
-   it. Replace the filename below with the exact name you downloaded:
-
-   ```bash
-   chmod +x ~/Applications/Kestrel-v0.2.2-x86_64.AppImage
-   ~/Applications/Kestrel-v0.2.2-x86_64.AppImage
-   ```
-
-To update, download the AppImage from a newer release and replace the old file. You do not need Qt
-or a compiler to use the AppImage.
-
-GitHub shows a failed run with a red X and identifies the failed step in its log. To receive
-notifications about failed runs, enable GitHub Actions notifications in your GitHub notification
-settings; the workflow does not send email on its own. A manually started workflow run also provides
-a temporary **Kestrel-AppImage** artifact, but only a successful version-tag run creates a Release.
+Follow [Build from source](#build-from-source), then run these commands from the Kestrel source
+directory to install it under `~/.local`:
 
 ### Build from source and install for your user
 
