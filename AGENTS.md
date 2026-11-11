@@ -137,10 +137,10 @@ QML:
 4. [x] KRunner bridge: query `org.kde.krunner1` runners over D-Bus (windows, calculator, units)
 5. [x] Action panel (Ctrl+K), filters (Ctrl+P), fallback web search
 6. [x] Calculator / unit / date inline results
-7. [ ] File search (Baloo/`kio` or an `fd` subprocess)
-8. [ ] Clipboard history and snippets
-9. [ ] Extension API (Raycast-shaped manifest, JSON-RPC process runtime)
-10. [ ] Settings UI, Breeze palette, i18n
+7. [x] File search (Baloo/`kio` or an `fd` subprocess)
+8. [x] Clipboard history and snippets
+9. [ ] Settings UI, Breeze palette, i18n
+10. [ ] Extension API (Raycast-shaped manifest, JSON-RPC process runtime)
 
 Stay inside this order. If a change jumps the queue, justify it in the commit body.
 

@@ -22,6 +22,10 @@ qt_add_library(kestrel_core STATIC
     src/desktopentry.h
     src/appindex.cpp
     src/appindex.h
+    src/filesearchclient.cpp
+    src/filesearchclient.h
+    src/clipboardstore.cpp
+    src/clipboardstore.h
     src/ranker.cpp
     src/ranker.h
     src/usagestore.cpp

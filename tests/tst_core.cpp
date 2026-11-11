@@ -506,6 +506,11 @@ void TestCore::krunnerResultsAreAddedAndRunOverDbus()
     const QByteArray previousData = qgetenv("XDG_DATA_HOME");
     qputenv("XDG_DATA_HOME", dataDir.path().toLocal8Bit());
 
+    QTemporaryDir homeDir;
+    QVERIFY(homeDir.isValid());
+    const QByteArray previousHome = qgetenv("HOME");
+    qputenv("HOME", homeDir.path().toLocal8Bit());
+
     const QString serviceName =
         QStringLiteral("org.example.KestrelTestRunner%1").arg(QCoreApplication::applicationPid());
     const QString runnerDirectory = dataDir.filePath(QStringLiteral("kservices6"));
@@ -548,6 +553,11 @@ void TestCore::krunnerResultsAreAddedAndRunOverDbus()
         qunsetenv("XDG_DATA_HOME");
     } else {
         qputenv("XDG_DATA_HOME", previousData);
+    }
+    if (previousHome.isNull()) {
+        qunsetenv("HOME");
+    } else {
+        qputenv("HOME", previousHome);
     }
 }
 

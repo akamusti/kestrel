@@ -12,6 +12,7 @@ Window {
     readonly property int footerHeight: 44
     readonly property int pageRows: Math.max(1, Math.floor(list.height / rowHeight))
     readonly property bool hasQuery: searchField.text.trim().length > 0
+    readonly property bool darkTheme: results.theme !== "light"
 
     // Wayland refuses activation for some windows; only hide after the window has
     // actually been active once, otherwise it would vanish right after showing.
@@ -120,6 +121,53 @@ Window {
     }
 
     Dialog {
+        id: settingsDialog
+        width: 460
+        anchors.centerIn: Overlay.overlay
+        modal: true
+        title: qsTr("Settings")
+
+        contentItem: Column {
+            spacing: 12
+            width: parent.width
+
+            Label {
+                text: qsTr("Web search URL (use %1 for the query)")
+                font.pixelSize: 12
+            }
+            TextField {
+                id: webSearchField
+                width: parent.width
+                text: results.webSearchUrl
+                onEditingFinished: results.webSearchUrl = text
+            }
+
+            Label {
+                text: qsTr("Theme")
+                font.pixelSize: 12
+            }
+            ComboBox {
+                id: themeBox
+                width: parent.width
+                model: [qsTr("Dark"), qsTr("Light")]
+                currentIndex: results.theme === "light" ? 1 : 0
+                onActivated: results.theme = (currentIndex === 1 ? "light" : "dark")
+            }
+        }
+
+        footer: Item {
+            implicitHeight: 40
+            Button {
+                anchors.right: parent.right
+                anchors.rightMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("Close")
+                onClicked: settingsDialog.close()
+            }
+        }
+    }
+
+    Dialog {
         id: autostartDialog
         width: 420
         anchors.centerIn: Overlay.overlay
@@ -172,9 +220,9 @@ Window {
         id: panel
         anchors.fill: parent
         radius: 14
-        color: "#ee14141a"
+        color: root.darkTheme ? "#ee14141a" : "#eef5f5f5"
         border.width: 1
-        border.color: "#26ffffff"
+        border.color: root.darkTheme ? "#26ffffff" : "#26000000"
         clip: true
 
         transform: Translate {
@@ -230,7 +278,7 @@ Window {
                 anchors.verticalCenter: parent.verticalCenter
                 focus: true
                 selectByMouse: true
-                color: "#f5f5f7"
+                color: root.darkTheme ? "#f5f5f7" : "#1a1a1a"
                 placeholderText: qsTr("Search apps and commands…")
                 placeholderTextColor: "#7a7a85"
                 font.pixelSize: 20
@@ -302,6 +350,10 @@ Window {
                         event.accepted = true
                     } else if (event.key === Qt.Key_K && (event.modifiers & Qt.ControlModifier)) {
                         root.openActions()
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_Comma && (event.modifiers & Qt.ControlModifier)) {
+                        settingsDialog.open()
+                        webSearchField.text = results.webSearchUrl
                         event.accepted = true
                     } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
                         results.nextFilter()
@@ -377,6 +429,8 @@ Window {
                           : section === "calculator" ? qsTr("CALCULATOR")
                           : section === "krunner" ? qsTr("KRUNNER")
                           : section === "web" ? qsTr("WEB")
+                          : section === "files" ? qsTr("FILES")
+                          : section === "clipboard" ? qsTr("CLIPBOARD")
                           : qsTr("RESULTS")
                     color: "#7a7a85"
                     font.pixelSize: 10
@@ -431,7 +485,7 @@ Window {
             width: parent.width
             height: root.footerHeight
             anchors.bottom: parent.bottom
-            color: "#0dffffff"
+            color: root.darkTheme ? "#0dffffff" : "#0d000000"
 
             Row {
                 anchors.left: parent.left

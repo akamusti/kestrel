@@ -7,6 +7,8 @@
 #include <QVector>
 
 #include "appindex.h"
+#include "clipboardstore.h"
+#include "filesearchclient.h"
 #include "calculator.h"
 #include "krunnerclient.h"
 #include "usagestore.h"
@@ -27,6 +29,8 @@ class SearchModel : public QAbstractListModel
     Q_PROPERTY(Filter filter READ filter WRITE setFilter NOTIFY filterChanged)
     Q_PROPERTY(QString filterLabel READ filterLabel NOTIFY filterChanged)
     Q_PROPERTY(bool filterActive READ filterActive NOTIFY filterChanged)
+    Q_PROPERTY(QString webSearchUrl READ webSearchUrl WRITE setWebSearchUrl NOTIFY webSearchUrlChanged)
+    Q_PROPERTY(QString theme READ theme WRITE setTheme NOTIFY themeChanged)
 
 public:
     enum Roles {
@@ -64,6 +68,10 @@ public:
     QString filterLabel() const;
     bool filterActive() const { return m_filter != Filter::All; }
     Q_INVOKABLE void nextFilter();
+    QString webSearchUrl() const { return m_webSearchTemplate; }
+    void setWebSearchUrl(const QString &url);
+    QString theme() const { return m_theme; }
+    void setTheme(const QString &theme);
 
     /// Launches the row and records applications for frecency + learned terms.
     Q_INVOKABLE bool launch(int row);
@@ -84,16 +92,20 @@ signals:
     void queryChanged();
     void countChanged();
     void filterChanged();
+    void webSearchUrlChanged();
+    void themeChanged();
     void launched(const QString &id);
 
 private:
-    enum class ResultKind { Entry, Runner, Calculator, Web };
+    enum class ResultKind { Entry, Runner, Calculator, Web, File, Clipboard };
 
     struct Result
     {
         ResultKind kind = ResultKind::Entry;
         int entryIndex = -1;
         int runnerIndex = -1;
+        int fileIndex = -1;
+        int clipboardIndex = -1;
         int score = 0;
         double frecency = 1.0;
         int section = 0;
@@ -101,6 +113,9 @@ private:
 
     void rebuild();
     void appendRunnerRows();
+    void appendFileRows();
+    void appendClipboardRows();
+    void appendFileMatches(const QString &query, const QStringList &paths);
     void scheduleWebFallback();
     void showWebFallback();
     void appendKRunnerMatches(const QString &query, const QVector<KRunnerMatch> &matches);
@@ -110,14 +125,19 @@ private:
     AppIndex *m_index = nullptr;
     UsageStore *m_usage = nullptr;
     KRunnerClient *m_krunnerClient = nullptr;
+    FileSearchClient *m_fileSearch = nullptr;
+    ClipboardStore *m_clipboardStore = nullptr;
     QVector<DesktopEntry> m_entries;
     QVector<KRunnerMatch> m_krunnerMatches;
+    QStringList m_fileMatches;
+    QStringList m_clipboardMatches;
     QString m_query;
     QString m_webSearchTemplate;
     CalculatorResult m_calculator;
     QVector<Result> m_results;
     QTimer m_webFallbackTimer;
     Filter m_filter = Filter::All;
+    QString m_theme = QStringLiteral("dark");
 };
 
 } // namespace kestrel

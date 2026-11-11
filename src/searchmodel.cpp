@@ -4,6 +4,7 @@
 #include "ranker.h"
 
 #include <QClipboard>
+#include <QFileInfo>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QGuiApplication>
@@ -57,18 +58,23 @@ SearchModel::SearchModel(QObject *parent)
     : QAbstractListModel(parent)
     , m_usage(new UsageStore(this))
     , m_krunnerClient(new KRunnerClient(this))
+    , m_fileSearch(new FileSearchClient(this))
+    , m_clipboardStore(new ClipboardStore(this))
 {
     QSettings settings(QSettings::IniFormat, QSettings::UserScope,
                        QStringLiteral("Kestrel"), QStringLiteral("kestrel"));
     m_webSearchTemplate =
         settings.value(QStringLiteral("web/searchUrl"), QString::fromLatin1(kDefaultWebSearch))
             .toString();
+    m_theme = settings.value(QStringLiteral("ui/theme"), QStringLiteral("dark")).toString();
     if (!m_webSearchTemplate.contains(QStringLiteral("%1"))) {
         m_webSearchTemplate = QString::fromLatin1(kDefaultWebSearch);
     }
 
     connect(m_krunnerClient, &KRunnerClient::matchesReady, this,
             &SearchModel::appendKRunnerMatches);
+    connect(m_fileSearch, &FileSearchClient::resultsReady, this,
+            &SearchModel::appendFileMatches);
 
     // Give local and KRunner sources a beat to answer before offering the web fallback,
     // so the row does not flash for queries that do have local results.
@@ -106,9 +112,12 @@ void SearchModel::setQuery(const QString &query)
     }
     m_query = query;
     m_krunnerMatches.clear();
+    m_fileMatches.clear();
+    m_clipboardMatches.clear();
     emit queryChanged();
     rebuild();
     m_krunnerClient->search(query);
+    m_fileSearch->search(query);
 }
 
 void SearchModel::setFilter(Filter filter)
@@ -152,6 +161,41 @@ void SearchModel::nextFilter()
         setFilter(Filter::All);
         break;
     }
+}
+
+void SearchModel::setWebSearchUrl(const QString &url)
+{
+    QString template_ = url.trimmed();
+    if (!template_.contains(QStringLiteral("%1"))) {
+        template_ = QString::fromLatin1(kDefaultWebSearch);
+    }
+    if (template_ == m_webSearchTemplate) {
+        return;
+    }
+    m_webSearchTemplate = template_;
+
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope,
+                       QStringLiteral("Kestrel"), QStringLiteral("kestrel"));
+    settings.setValue(QStringLiteral("web/searchUrl"), m_webSearchTemplate);
+
+    emit webSearchUrlChanged();
+}
+
+void SearchModel::setTheme(const QString &theme)
+{
+    const QString normalized = theme.trimmed().toLower();
+    const QString value = (normalized == QLatin1String("light")) ? QStringLiteral("light")
+                                                                 : QStringLiteral("dark");
+    if (value == m_theme) {
+        return;
+    }
+    m_theme = value;
+
+    QSettings settings(QSettings::IniFormat, QSettings::UserScope,
+                       QStringLiteral("Kestrel"), QStringLiteral("kestrel"));
+    settings.setValue(QStringLiteral("ui/theme"), m_theme);
+
+    emit themeChanged();
 }
 
 int SearchModel::rowCount(const QModelIndex &parent) const
@@ -257,6 +301,62 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
         }
     }
 
+    if (result.kind == ResultKind::File) {
+        if (result.fileIndex < 0 || result.fileIndex >= m_fileMatches.size()) {
+            return {};
+        }
+        const QString path = m_fileMatches.at(result.fileIndex);
+        const QString name = QFileInfo(path).fileName();
+        switch (role) {
+        case IdRole:
+            return path;
+        case NameRole:
+            return name;
+        case SubtitleRole:
+            return path;
+        case IconRole:
+            return QStringLiteral("text-x-generic");
+        case SectionRole:
+            return QStringLiteral("files");
+        case KindRole:
+            return QStringLiteral("File");
+        case TerminalRole:
+            return false;
+        case SourceRole:
+            return QStringLiteral("file");
+        default:
+            return {};
+        }
+    }
+
+    if (result.kind == ResultKind::Clipboard) {
+        if (result.clipboardIndex < 0 || result.clipboardIndex >= m_clipboardMatches.size()) {
+            return {};
+        }
+        const QString text = m_clipboardMatches.at(result.clipboardIndex);
+        const QString preview = text.left(60).replace(u'\n', u' ');
+        switch (role) {
+        case IdRole:
+            return QStringLiteral("clipboard/") + QString::number(result.clipboardIndex);
+        case NameRole:
+            return preview;
+        case SubtitleRole:
+            return text;
+        case IconRole:
+            return QStringLiteral("edit-paste");
+        case SectionRole:
+            return QStringLiteral("clipboard");
+        case KindRole:
+            return QStringLiteral("Clipboard");
+        case TerminalRole:
+            return false;
+        case SourceRole:
+            return QStringLiteral("clipboard");
+        default:
+            return {};
+        }
+    }
+
     if (result.entryIndex < 0 || result.entryIndex >= m_entries.size()) {
         return {};
     }
@@ -301,6 +401,16 @@ QString SearchModel::nameAt(int row) const
             return {};
         }
         return m_krunnerMatches.at(result.runnerIndex).text;
+    case ResultKind::File:
+        if (result.fileIndex < 0 || result.fileIndex >= m_fileMatches.size()) {
+            return {};
+        }
+        return QFileInfo(m_fileMatches.at(result.fileIndex)).fileName();
+    case ResultKind::Clipboard:
+        if (result.clipboardIndex < 0 || result.clipboardIndex >= m_clipboardMatches.size()) {
+            return {};
+        }
+        return m_clipboardMatches.at(result.clipboardIndex).left(60);
     case ResultKind::Entry:
         break;
     }
@@ -322,6 +432,10 @@ QString SearchModel::sourceAt(int row) const
         return QStringLiteral("web");
     case ResultKind::Runner:
         return QStringLiteral("krunner");
+    case ResultKind::File:
+        return QStringLiteral("file");
+    case ResultKind::Clipboard:
+        return QStringLiteral("clipboard");
     case ResultKind::Entry:
         break;
     }
@@ -351,6 +465,14 @@ QVariantList SearchModel::actionsAt(int row) const
         actions.append(makeAction(QStringLiteral("copy-name"), tr("Copy Name"),
                                   QStringLiteral("Ctrl+Shift+C")));
         actions.append(makeAction(QStringLiteral("copy-id"), tr("Copy Identifier")));
+        break;
+    case ResultKind::File:
+        actions.append(makeAction(QStringLiteral("open"), tr("Open"), QStringLiteral("↵")));
+        actions.append(makeAction(QStringLiteral("copy-path"), tr("Copy Path")));
+        break;
+    case ResultKind::Clipboard:
+        actions.append(makeAction(QStringLiteral("copy-result"), tr("Copy to Clipboard"),
+                                  QStringLiteral("↵")));
         break;
     case ResultKind::Entry:
         actions.append(makeAction(QStringLiteral("open"), tr("Open"), QStringLiteral("↵")));
@@ -397,6 +519,27 @@ bool SearchModel::runAction(int row, const QString &actionId)
         return false;
     }
 
+    case ResultKind::File: {
+        if (result.fileIndex < 0 || result.fileIndex >= m_fileMatches.size()) {
+            return false;
+        }
+        const QString path = m_fileMatches.at(result.fileIndex);
+        if (actionId == QLatin1String("copy-path")) {
+            return copyToClipboard(path);
+        }
+        return false;
+    }
+
+    case ResultKind::Clipboard: {
+        if (result.clipboardIndex < 0 || result.clipboardIndex >= m_clipboardMatches.size()) {
+            return false;
+        }
+        if (actionId == QLatin1String("copy-result")) {
+            return copyToClipboard(m_clipboardMatches.at(result.clipboardIndex));
+        }
+        return false;
+    }
+
     case ResultKind::Entry:
         break;
     }
@@ -437,6 +580,20 @@ bool SearchModel::launch(int row)
         }
         m_krunnerClient->run(m_krunnerMatches.at(result.runnerIndex));
         return true;
+    }
+
+    case ResultKind::File: {
+        if (result.fileIndex < 0 || result.fileIndex >= m_fileMatches.size()) {
+            return false;
+        }
+        return QDesktopServices::openUrl(QUrl::fromLocalFile(m_fileMatches.at(result.fileIndex)));
+    }
+
+    case ResultKind::Clipboard: {
+        if (result.clipboardIndex < 0 || result.clipboardIndex >= m_clipboardMatches.size()) {
+            return false;
+        }
+        return copyToClipboard(m_clipboardMatches.at(result.clipboardIndex));
     }
 
     case ResultKind::Entry:
@@ -492,6 +649,15 @@ void SearchModel::rebuild()
             });
             m_results = all.mid(0, kEmptyQueryLimit);
         }
+
+        // Clipboard history is available even without a query.
+        m_clipboardMatches.clear();
+        const QStringList &history = m_clipboardStore->items();
+        for (int i = 0; i < history.size() && i < 5; ++i) {
+            m_clipboardMatches.append(history.at(i));
+        }
+        appendClipboardRows();
+
         endResetModel();
         emit countChanged();
         return;
@@ -651,6 +817,27 @@ void SearchModel::rebuild()
         appendRunnerRows();
     }
 
+    // Clipboard history: fuzzy-match the stored items against the query.
+    m_clipboardMatches.clear();
+    const QStringList &history = m_clipboardStore->items();
+    for (const QString &item : history) {
+        if (m_clipboardMatches.size() >= 20) {
+            break;
+        }
+        if (query.isEmpty()) {
+            m_clipboardMatches.append(item);
+            continue;
+        }
+        const int score = fuzzyScore(foldText(item), foldedQuery);
+        if (score != kNoMatch) {
+            m_clipboardMatches.append(item);
+        }
+    }
+    appendClipboardRows();
+
+    // File search results already collected for this query.
+    appendFileRows();
+
     // The web fallback is the last resort: no local result and the index has finished loading.
     if (m_filter == Filter::All && m_results.isEmpty()
         && !(m_index && m_index->isLoading())) {
@@ -698,6 +885,59 @@ void SearchModel::appendRunnerRows()
         result.section = ResultsSection;
         m_results.append(result);
     }
+}
+
+void SearchModel::appendFileRows()
+{
+    if (m_fileMatches.isEmpty()) {
+        return;
+    }
+    for (int i = 0; i < m_fileMatches.size(); ++i) {
+        Result result;
+        result.kind = ResultKind::File;
+        result.fileIndex = i;
+        result.section = ResultsSection;
+        m_results.append(result);
+    }
+}
+
+void SearchModel::appendClipboardRows()
+{
+    const int start = static_cast<int>(m_results.size());
+    for (int i = 0; i < m_clipboardMatches.size(); ++i) {
+        Result result;
+        result.kind = ResultKind::Clipboard;
+        result.clipboardIndex = i;
+        result.section = ResultsSection;
+        m_results.append(result);
+    }
+}
+
+void SearchModel::appendFileMatches(const QString &query, const QStringList &paths)
+{
+    if (query != m_query.trimmed() || query.isEmpty() || paths.isEmpty()) {
+        return;
+    }
+
+    m_fileMatches = paths;
+    if (!m_results.isEmpty() && m_results.constLast().kind == ResultKind::Web) {
+        const int row = static_cast<int>(m_results.size()) - 1;
+        beginRemoveRows(QModelIndex(), row, row);
+        m_results.removeLast();
+        endRemoveRows();
+    }
+
+    const int first = static_cast<int>(m_results.size());
+    beginInsertRows(QModelIndex(), first, first + paths.size() - 1);
+    for (int i = 0; i < paths.size(); ++i) {
+        Result result;
+        result.kind = ResultKind::File;
+        result.fileIndex = i;
+        result.section = ResultsSection;
+        m_results.append(result);
+    }
+    endInsertRows();
+    emit countChanged();
 }
 
 void SearchModel::appendKRunnerMatches(const QString &query,
