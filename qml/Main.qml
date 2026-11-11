@@ -13,6 +13,20 @@ Window {
     readonly property int pageRows: Math.max(1, Math.floor(list.height / rowHeight))
     readonly property bool hasQuery: searchField.text.trim().length > 0
     readonly property bool darkTheme: results.theme !== "light"
+    readonly property color panelBg:
+        results.theme === "light" ? "#eef5f5f5" :
+        results.theme === "breeze-light" ? "#eef0f4f8" :
+        results.theme === "nord" ? "#ee2e3440" :
+        results.theme === "dracula" ? "#ee282a36" :
+        results.theme === "solarized" ? "#ee002b36" :
+        results.theme === "breeze-dark" ? "#ee232629" :
+        "#ee14141a"
+    readonly property color panelBorder:
+        results.theme === "light" || results.theme === "breeze-light" ? "#26000000" : "#26ffffff"
+    readonly property color textColor:
+        results.theme === "light" || results.theme === "breeze-light" ? "#1a1a1a" : "#f5f5f7"
+    readonly property color footerBg:
+        results.theme === "light" || results.theme === "breeze-light" ? "#0d000000" : "#0dffffff"
 
     // Wayland refuses activation for some windows; only hide after the window has
     // actually been active once, otherwise it would vanish right after showing.
@@ -149,9 +163,22 @@ Window {
             ComboBox {
                 id: themeBox
                 width: parent.width
-                model: [qsTr("Dark"), qsTr("Light")]
-                currentIndex: results.theme === "light" ? 1 : 0
-                onActivated: results.theme = (currentIndex === 1 ? "light" : "dark")
+                model: [qsTr("Dark"), qsTr("Light"), qsTr("Breeze Dark"), qsTr("Breeze Light"),
+                        qsTr("Nord"), qsTr("Dracula"), qsTr("Solarized")]
+                currentIndex: {
+                    const t = results.theme
+                    if (t === "light") return 1
+                    if (t === "breeze-dark") return 2
+                    if (t === "breeze-light") return 3
+                    if (t === "nord") return 4
+                    if (t === "dracula") return 5
+                    if (t === "solarized") return 6
+                    return 0
+                }
+                onActivated: {
+                    const values = ["dark","light","breeze-dark","breeze-light","nord","dracula","solarized"]
+                    results.theme = values[currentIndex]
+                }
             }
         }
 
@@ -220,9 +247,9 @@ Window {
         id: panel
         anchors.fill: parent
         radius: 14
-        color: root.darkTheme ? "#ee14141a" : "#eef5f5f5"
+        color: root.panelBg
         border.width: 1
-        border.color: root.darkTheme ? "#26ffffff" : "#26000000"
+        border.color: root.panelBorder
         clip: true
 
         transform: Translate {
@@ -278,7 +305,7 @@ Window {
                 anchors.verticalCenter: parent.verticalCenter
                 focus: true
                 selectByMouse: true
-                color: root.darkTheme ? "#f5f5f7" : "#1a1a1a"
+                color: root.textColor
                 placeholderText: qsTr("Search apps and commands…")
                 placeholderTextColor: "#7a7a85"
                 font.pixelSize: 20
@@ -485,7 +512,7 @@ Window {
             width: parent.width
             height: root.footerHeight
             anchors.bottom: parent.bottom
-            color: root.darkTheme ? "#0dffffff" : "#0d000000"
+            color: root.footerBg
 
             Row {
                 anchors.left: parent.left
