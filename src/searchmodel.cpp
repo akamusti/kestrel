@@ -52,6 +52,13 @@ QVariantMap makeAction(const QString &id, const QString &title, const QString &s
     return action;
 }
 
+/// Flattens multi-line clipboard text into a single-line preview.
+QString clipboardPreview(const QString &text, int limit)
+{
+    const QString flat = text.simplified();
+    return flat.left(limit);
+}
+
 } // namespace
 
 SearchModel::SearchModel(QObject *parent)
@@ -339,14 +346,13 @@ QVariant SearchModel::data(const QModelIndex &index, int role) const
             return {};
         }
         const QString text = m_clipboardMatches.at(result.clipboardIndex);
-        const QString preview = text.left(60).replace(u'\n', u' ');
         switch (role) {
         case IdRole:
             return QStringLiteral("clipboard/") + QString::number(result.clipboardIndex);
         case NameRole:
-            return preview;
+            return clipboardPreview(text, 80);
         case SubtitleRole:
-            return text;
+            return clipboardPreview(text, 160);
         case IconRole:
             return QStringLiteral("edit-paste");
         case SectionRole:
@@ -415,7 +421,7 @@ QString SearchModel::nameAt(int row) const
         if (result.clipboardIndex < 0 || result.clipboardIndex >= m_clipboardMatches.size()) {
             return {};
         }
-        return m_clipboardMatches.at(result.clipboardIndex).left(60);
+        return clipboardPreview(m_clipboardMatches.at(result.clipboardIndex), 80);
     case ResultKind::Entry:
         break;
     }

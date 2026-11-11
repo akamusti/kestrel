@@ -63,6 +63,8 @@ Item {
                     color: delegate.textColor
                     font.pixelSize: 15
                     elide: Text.ElideRight
+                    maximumLineCount: 1
+                    wrapMode: Text.NoWrap
                 }
 
                 Text {
@@ -71,6 +73,8 @@ Item {
                     color: delegate.subtitleColor
                     font.pixelSize: 12
                     elide: Text.ElideRight
+                    maximumLineCount: 1
+                    wrapMode: Text.NoWrap
                     visible: text.length > 0
                 }
             }
