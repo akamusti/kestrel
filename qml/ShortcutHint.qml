@@ -5,6 +5,10 @@ Row {
 
     property string keys: ""
     property string label: ""
+    property color chipBg: "#1affffff"
+    property color chipBorder: "#22ffffff"
+    property color chipText: "#c9c9d1"
+    property color labelColor: "#6e6e79"
 
     spacing: 6
 
@@ -13,15 +17,15 @@ Row {
         width: keysText.implicitWidth + 12
         height: 20
         radius: 5
-        color: "#1affffff"
+        color: hint.chipBg
         border.width: 1
-        border.color: "#22ffffff"
+        border.color: hint.chipBorder
 
         Text {
             id: keysText
             anchors.centerIn: parent
             text: hint.keys
-            color: "#c9c9d1"
+            color: hint.chipText
             font.pixelSize: 10
             font.bold: true
         }
@@ -30,7 +34,7 @@ Row {
     Text {
         anchors.verticalCenter: parent.verticalCenter
         text: hint.label
-        color: "#6e6e79"
+        color: hint.labelColor
         font.pixelSize: 11
     }
 }

@@ -184,8 +184,13 @@ void SearchModel::setWebSearchUrl(const QString &url)
 void SearchModel::setTheme(const QString &theme)
 {
     const QString normalized = theme.trimmed().toLower();
-    const QString value = (normalized == QLatin1String("light")) ? QStringLiteral("light")
-                                                                 : QStringLiteral("dark");
+    static const QStringList known{
+        QStringLiteral("dark"),        QStringLiteral("light"),
+        QStringLiteral("breeze-dark"), QStringLiteral("breeze-light"),
+        QStringLiteral("nord"),        QStringLiteral("dracula"),
+        QStringLiteral("solarized"),
+    };
+    const QString value = known.contains(normalized) ? normalized : QStringLiteral("dark");
     if (value == m_theme) {
         return;
     }

@@ -10,6 +10,10 @@ Item {
     required property string kind
 
     property bool selected: false
+    property color textColor: "#f5f5f7"
+    property color subtitleColor: "#8b8b96"
+    property color kindColor: "#6e6e79"
+    property color highlightColor: "#24ffffff"
 
     signal clicked()
 
@@ -23,7 +27,7 @@ Item {
         anchors.topMargin: 1
         anchors.bottomMargin: 1
         radius: 10
-        color: delegate.selected ? "#24ffffff" : "transparent"
+        color: delegate.selected ? delegate.highlightColor : "transparent"
 
         Behavior on color {
             ColorAnimation {
@@ -56,7 +60,7 @@ Item {
                 Text {
                     width: parent.width
                     text: delegate.name
-                    color: "#f5f5f7"
+                    color: delegate.textColor
                     font.pixelSize: 15
                     elide: Text.ElideRight
                 }
@@ -64,7 +68,7 @@ Item {
                 Text {
                     width: parent.width
                     text: delegate.subtitle
-                    color: "#8b8b96"
+                    color: delegate.subtitleColor
                     font.pixelSize: 12
                     elide: Text.ElideRight
                     visible: text.length > 0
@@ -75,7 +79,7 @@ Item {
                 id: kindLabel
                 anchors.verticalCenter: parent.verticalCenter
                 text: delegate.kind
-                color: "#6e6e79"
+                color: delegate.kindColor
                 font.pixelSize: 11
             }
         }

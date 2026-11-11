@@ -8,6 +8,12 @@ Rectangle {
     property string title: ""
     property var items: []
     property int currentIndex: 0
+    property color panelBg: "#f216161c"
+    property color panelBorder: "#26ffffff"
+    property color headerColor: "#7a7a85"
+    property color textColor: "#f5f5f7"
+    property color mutedColor: "#6e6e79"
+    property color highlightColor: "#26ffffff"
 
     signal activated(int index)
 
@@ -16,9 +22,9 @@ Rectangle {
 
     implicitHeight: headerHeight + Math.max(1, items.length) * rowHeight + 8
     radius: 12
-    color: "#f216161c"
+    color: panel.panelBg
     border.width: 1
-    border.color: "#26ffffff"
+    border.color: panel.panelBorder
 
     Text {
         id: header
@@ -27,7 +33,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.topMargin: 8
         text: panel.title
-        color: "#7a7a85"
+        color: panel.headerColor
         font.pixelSize: 10
         font.letterSpacing: 0.8
         font.bold: true
@@ -53,14 +59,14 @@ Rectangle {
                 width: parent.width
                 height: panel.rowHeight
                 radius: 8
-                color: row.index === panel.currentIndex ? "#26ffffff" : "transparent"
+                color: row.index === panel.currentIndex ? panel.highlightColor : "transparent"
 
                 Text {
                     anchors.left: parent.left
                     anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.title
-                    color: "#f5f5f7"
+                    color: panel.textColor
                     font.pixelSize: 13
                 }
 
@@ -69,7 +75,7 @@ Rectangle {
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.modelData.shortcut
-                    color: "#6e6e79"
+                    color: panel.mutedColor
                     font.pixelSize: 10
                     visible: text.length > 0
                 }

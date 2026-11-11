@@ -81,6 +81,7 @@ private slots:
     void autostartPromptCanBeDismissed();
     void searchModelShowsWebFallback();
     void searchModelFiltersResultSources();
+    void searchModelAppliesTheme();
     void parsesKRunnerDbusRunnerMetadata();
     void ignoresDisabledAndNonDbusRunners();
     void krunnerResultsAreAddedAndRunOverDbus();
@@ -451,6 +452,27 @@ void TestCore::autostartPromptCanBeDismissed()
     } else {
         qputenv("XDG_CONFIG_HOME", previousConfig);
     }
+}
+
+void TestCore::searchModelAppliesTheme()
+{
+    SearchModel model;
+    QSignalSpy themeSpy(&model, &SearchModel::themeChanged);
+
+    model.setTheme(QStringLiteral("light"));
+    QCOMPARE(model.theme(), QStringLiteral("light"));
+    QCOMPARE(themeSpy.count(), 1);
+
+    model.setTheme(QStringLiteral("light"));
+    QCOMPARE(themeSpy.count(), 1);
+
+    model.setTheme(QStringLiteral("nord"));
+    QCOMPARE(model.theme(), QStringLiteral("nord"));
+    QCOMPARE(themeSpy.count(), 2);
+
+    // Unknown themes fall back to dark.
+    model.setTheme(QStringLiteral("unknown"));
+    QCOMPARE(model.theme(), QStringLiteral("dark"));
 }
 
 void TestCore::parsesKRunnerDbusRunnerMetadata()

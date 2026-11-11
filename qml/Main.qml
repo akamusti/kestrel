@@ -27,6 +27,17 @@ Window {
         results.theme === "light" || results.theme === "breeze-light" ? "#1a1a1a" : "#f5f5f7"
     readonly property color footerBg:
         results.theme === "light" || results.theme === "breeze-light" ? "#0d000000" : "#0dffffff"
+    readonly property bool lightTheme:
+        results.theme === "light" || results.theme === "breeze-light"
+    readonly property color mutedColor: lightTheme ? "#5f6368" : "#8b8b96"
+    readonly property color faintColor: lightTheme ? "#777b80" : "#7a7a85"
+    readonly property color highlightColor: lightTheme ? "#18000000" : "#24ffffff"
+    readonly property color chipBg: lightTheme ? "#14000000" : "#1affffff"
+    readonly property color chipBorder: lightTheme ? "#22000000" : "#22ffffff"
+    readonly property color chipText: lightTheme ? "#3c4043" : "#c9c9d1"
+    readonly property color overlayBg: lightTheme ? "#f2f7f8fa" : "#f216161c"
+    readonly property color overlayBorder: lightTheme ? "#26000000" : "#26ffffff"
+    readonly property color toastBg: lightTheme ? "#f0ffffff" : "#f01f1f26"
 
     // Wayland refuses activation for some windows; only hide after the window has
     // actually been active once, otherwise it would vanish right after showing.
@@ -136,68 +147,108 @@ Window {
 
     Dialog {
         id: settingsDialog
-        width: 520
+        width: 560
         anchors.centerIn: Overlay.overlay
         modal: true
         title: qsTr("Settings")
-        padding: 20
+        padding: 24
+
+        background: Rectangle {
+            color: root.overlayBg
+            radius: 14
+            border.width: 1
+            border.color: root.overlayBorder
+        }
 
         contentItem: Column {
-            spacing: 16
+            spacing: 18
             width: parent.width
 
             Label {
-                text: qsTr("Web search URL (use %1 for the query)")
-                font.pixelSize: 12
+                text: qsTr("Appearance")
+                color: root.textColor
+                font.pixelSize: 13
+                font.bold: true
             }
+
+            Row {
+                width: parent.width
+                spacing: 12
+
+                ComboBox {
+                    id: themeBox
+                    width: parent.width - preview.width - parent.spacing
+                    model: [qsTr("Dark"), qsTr("Light"), qsTr("Breeze Dark"), qsTr("Breeze Light"),
+                            qsTr("Nord"), qsTr("Dracula"), qsTr("Solarized")]
+                    currentIndex: {
+                        const t = results.theme
+                        if (t === "light") return 1
+                        if (t === "breeze-dark") return 2
+                        if (t === "breeze-light") return 3
+                        if (t === "nord") return 4
+                        if (t === "dracula") return 5
+                        if (t === "solarized") return 6
+                        return 0
+                    }
+                    onActivated: {
+                        const values = ["dark","light","breeze-dark","breeze-light","nord","dracula","solarized"]
+                        results.theme = values[currentIndex]
+                    }
+                }
+
+                Rectangle {
+                    id: preview
+                    width: 132
+                    height: 36
+                    radius: 8
+                    color: root.panelBg
+                    border.width: 1
+                    border.color: root.panelBorder
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: qsTr("Aa")
+                        color: root.textColor
+                        font.pixelSize: 14
+                        font.bold: true
+                    }
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: 1
+                color: root.panelBorder
+            }
+
+            Label {
+                text: qsTr("Web search")
+                color: root.textColor
+                font.pixelSize: 13
+                font.bold: true
+            }
+
+            Label {
+                width: parent.width
+                wrapMode: Text.Wrap
+                text: qsTr("URL template used when nothing matches. Use %1 for the query.")
+                color: root.mutedColor
+                font.pixelSize: 11
+            }
+
             TextField {
                 id: webSearchField
                 width: parent.width
                 text: results.webSearchUrl
                 onEditingFinished: results.webSearchUrl = text
             }
-
-            Label {
-                text: qsTr("Theme")
-                font.pixelSize: 12
-            }
-            ComboBox {
-                id: themeBox
-                width: parent.width
-                model: [qsTr("Dark"), qsTr("Light"), qsTr("Breeze Dark"), qsTr("Breeze Light"),
-                        qsTr("Nord"), qsTr("Dracula"), qsTr("Solarized")]
-                currentIndex: {
-                    const t = results.theme
-                    if (t === "light") return 1
-                    if (t === "breeze-dark") return 2
-                    if (t === "breeze-light") return 3
-                    if (t === "nord") return 4
-                    if (t === "dracula") return 5
-                    if (t === "solarized") return 6
-                    return 0
-                }
-                onActivated: {
-                    const values = ["dark","light","breeze-dark","breeze-light","nord","dracula","solarized"]
-                    results.theme = values[currentIndex]
-                }
-            }
         }
 
         footer: Item {
-            implicitHeight: 44
-            Button {
-                anchors.left: parent.left
-                anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("⚙ Settings")
-                onClicked: {
-                    settingsDialog.open()
-                    webSearchField.text = results.webSearchUrl
-                }
-            }
+            implicitHeight: 48
             Button {
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
                 text: qsTr("Close")
                 onClicked: settingsDialog.close()
@@ -311,6 +362,7 @@ Window {
             TextField {
                 id: searchField
                 width: header.width - 40 - 18 - header.spacing
+                       - settingsButton.width - header.spacing
                        - (filterChip.visible ? filterChip.width + header.spacing : 0)
                 height: header.height
                 anchors.verticalCenter: parent.verticalCenter
@@ -318,7 +370,7 @@ Window {
                 selectByMouse: true
                 color: root.textColor
                 placeholderText: qsTr("Search apps and commands…")
-                placeholderTextColor: "#7a7a85"
+                placeholderTextColor: root.faintColor
                 font.pixelSize: 20
                 background: null
                 padding: 0
@@ -420,15 +472,15 @@ Window {
                 height: 22
                 radius: 11
                 visible: results.filterActive
-                color: "#1affffff"
+                color: root.chipBg
                 border.width: 1
-                border.color: "#22ffffff"
+                border.color: root.chipBorder
 
                 Text {
                     id: filterChipLabel
                     anchors.centerIn: parent
                     text: results.filterLabel
-                    color: "#c9c9d1"
+                    color: root.chipText
                     font.pixelSize: 10
                     font.bold: true
                 }
@@ -436,6 +488,19 @@ Window {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: results.nextFilter()
+                }
+            }
+
+            Button {
+                id: settingsButton
+                anchors.verticalCenter: parent.verticalCenter
+                width: 30
+                height: 24
+                text: "⚙"
+                font.pixelSize: 13
+                onClicked: {
+                    settingsDialog.open()
+                    webSearchField.text = results.webSearchUrl
                 }
             }
         }
@@ -474,7 +539,7 @@ Window {
                           : section === "files" ? qsTr("FILES")
                           : section === "clipboard" ? qsTr("CLIPBOARD")
                           : qsTr("RESULTS")
-                    color: "#7a7a85"
+                    color: root.faintColor
                     font.pixelSize: 10
                     font.letterSpacing: 0.8
                     font.bold: true
@@ -484,6 +549,10 @@ Window {
             delegate: ResultDelegate {
                 width: list.width
                 selected: ListView.isCurrentItem
+                textColor: root.textColor
+                subtitleColor: root.mutedColor
+                kindColor: root.faintColor
+                highlightColor: root.highlightColor
                 onClicked: {
                     list.currentIndex = index
                     root.activateCurrent()
@@ -497,7 +566,7 @@ Window {
                                        : root.hasQuery ? qsTr("No results for “%1”").arg(searchField.text)
                                        : results.filterActive ? qsTr("Nothing in %1").arg(results.filterLabel)
                                                               : qsTr("No applications found")
-                color: "#7a7a85"
+                color: root.faintColor
                 font.pixelSize: 14
             }
         }
@@ -511,12 +580,21 @@ Window {
             anchors.rightMargin: 12
             anchors.bottomMargin: 8
             title: qsTr("ACTIONS")
+            panelBg: root.overlayBg
+            panelBorder: root.overlayBorder
+            headerColor: root.faintColor
+            textColor: root.textColor
+            mutedColor: root.faintColor
+            highlightColor: root.highlightColor
             visible: false
             onActivated: (index) => root.runAction(index)
         }
 
         Toast {
             id: toast
+            toastBg: root.toastBg
+            toastBorder: root.overlayBorder
+            textColor: root.textColor
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.bottom: footer.top
             anchors.bottomMargin: 12
@@ -538,22 +616,42 @@ Window {
                 ShortcutHint {
                     keys: "↑↓"
                     label: qsTr("Navigate")
+                    chipBg: root.chipBg
+                    chipBorder: root.chipBorder
+                    chipText: root.chipText
+                    labelColor: root.faintColor
                 }
                 ShortcutHint {
                     keys: "↵"
                     label: qsTr("Open")
+                    chipBg: root.chipBg
+                    chipBorder: root.chipBorder
+                    chipText: root.chipText
+                    labelColor: root.faintColor
                 }
                 ShortcutHint {
                     keys: "ctrl K"
                     label: qsTr("Actions")
+                    chipBg: root.chipBg
+                    chipBorder: root.chipBorder
+                    chipText: root.chipText
+                    labelColor: root.faintColor
                 }
                 ShortcutHint {
                     keys: "ctrl P"
                     label: qsTr("Filter")
+                    chipBg: root.chipBg
+                    chipBorder: root.chipBorder
+                    chipText: root.chipText
+                    labelColor: root.faintColor
                 }
                 ShortcutHint {
                     keys: "esc"
                     label: qsTr("Close")
+                    chipBg: root.chipBg
+                    chipBorder: root.chipBorder
+                    chipText: root.chipText
+                    labelColor: root.faintColor
                 }
             }
 
@@ -562,7 +660,7 @@ Window {
                 anchors.rightMargin: 18
                 anchors.verticalCenter: parent.verticalCenter
                 text: qsTr("Kestrel · %1 apps").arg(appIndex.count)
-                color: "#7a7a85"
+                color: root.faintColor
                 font.pixelSize: 11
             }
         }
