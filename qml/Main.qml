@@ -136,13 +136,14 @@ Window {
 
     Dialog {
         id: settingsDialog
-        width: 460
+        width: 520
         anchors.centerIn: Overlay.overlay
         modal: true
         title: qsTr("Settings")
+        padding: 20
 
         contentItem: Column {
-            spacing: 12
+            spacing: 16
             width: parent.width
 
             Label {
@@ -183,7 +184,17 @@ Window {
         }
 
         footer: Item {
-            implicitHeight: 40
+            implicitHeight: 44
+            Button {
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+                text: qsTr("⚙ Settings")
+                onClicked: {
+                    settingsDialog.open()
+                    webSearchField.text = results.webSearchUrl
+                }
+            }
             Button {
                 anchors.right: parent.right
                 anchors.rightMargin: 12
@@ -379,6 +390,10 @@ Window {
                         root.openActions()
                         event.accepted = true
                     } else if (event.key === Qt.Key_Comma && (event.modifiers & Qt.ControlModifier)) {
+                        settingsDialog.open()
+                        webSearchField.text = results.webSearchUrl
+                        event.accepted = true
+                    } else if (event.key === Qt.Key_S && (event.modifiers & Qt.ControlModifier)) {
                         settingsDialog.open()
                         webSearchField.text = results.webSearchUrl
                         event.accepted = true
