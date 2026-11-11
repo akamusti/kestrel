@@ -145,115 +145,25 @@ Window {
         id: autostart
     }
 
-    Dialog {
-        id: settingsDialog
-        width: 560
-        anchors.centerIn: Overlay.overlay
-        modal: true
-        title: qsTr("Settings")
-        padding: 24
-
-        background: Rectangle {
-            color: root.overlayBg
-            radius: 14
-            border.width: 1
-            border.color: root.overlayBorder
-        }
-
-        contentItem: Column {
-            spacing: 18
-            width: parent.width
-
-            Label {
-                text: qsTr("Appearance")
-                color: root.textColor
-                font.pixelSize: 13
-                font.bold: true
-            }
-
-            Row {
-                width: parent.width
-                spacing: 12
-
-                ComboBox {
-                    id: themeBox
-                    width: parent.width - preview.width - parent.spacing
-                    model: [qsTr("Dark"), qsTr("Light"), qsTr("Breeze Dark"), qsTr("Breeze Light"),
-                            qsTr("Nord"), qsTr("Dracula"), qsTr("Solarized")]
-                    currentIndex: {
-                        const t = results.theme
-                        if (t === "light") return 1
-                        if (t === "breeze-dark") return 2
-                        if (t === "breeze-light") return 3
-                        if (t === "nord") return 4
-                        if (t === "dracula") return 5
-                        if (t === "solarized") return 6
-                        return 0
-                    }
-                    onActivated: {
-                        const values = ["dark","light","breeze-dark","breeze-light","nord","dracula","solarized"]
-                        results.theme = values[currentIndex]
-                    }
-                }
-
-                Rectangle {
-                    id: preview
-                    width: 132
-                    height: 36
-                    radius: 8
-                    color: root.panelBg
-                    border.width: 1
-                    border.color: root.panelBorder
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: qsTr("Aa")
-                        color: root.textColor
-                        font.pixelSize: 14
-                        font.bold: true
-                    }
-                }
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 1
-                color: root.panelBorder
-            }
-
-            Label {
-                text: qsTr("Web search")
-                color: root.textColor
-                font.pixelSize: 13
-                font.bold: true
-            }
-
-            Label {
-                width: parent.width
-                wrapMode: Text.Wrap
-                text: qsTr("URL template used when nothing matches. Use %1 for the query.")
-                color: root.mutedColor
-                font.pixelSize: 11
-            }
-
-            TextField {
-                id: webSearchField
-                width: parent.width
-                text: results.webSearchUrl
-                onEditingFinished: results.webSearchUrl = text
-            }
-        }
-
-        footer: Item {
-            implicitHeight: 48
-            Button {
-                anchors.right: parent.right
-                anchors.rightMargin: 16
-                anchors.verticalCenter: parent.verticalCenter
-                text: qsTr("Close")
-                onClicked: settingsDialog.close()
-            }
-        }
+    SettingsView {
+        id: settingsView
+        z: 1000
+        visible: false
+        panelBg: root.panelBg
+        panelBorder: root.panelBorder
+        textColor: root.textColor
+        mutedColor: root.mutedColor
+        faintColor: root.faintColor
+        chipBg: root.chipBg
+        chipBorder: root.chipBorder
+        highlightColor: root.highlightColor
+        accentColor: "#7c9cff"
+        theme: results.theme
+        webSearchUrl: results.webSearchUrl
+        autostart: autostart
+        onThemeSelected: (themeId) => results.theme = themeId
+        onWebSearchUrlEdited: (url) => results.webSearchUrl = url
+        onCloseRequested: searchField.forceActiveFocus()
     }
 
     Dialog {
@@ -442,12 +352,10 @@ Window {
                         root.openActions()
                         event.accepted = true
                     } else if (event.key === Qt.Key_Comma && (event.modifiers & Qt.ControlModifier)) {
-                        settingsDialog.open()
-                        webSearchField.text = results.webSearchUrl
+                        settingsView.open()
                         event.accepted = true
                     } else if (event.key === Qt.Key_S && (event.modifiers & Qt.ControlModifier)) {
-                        settingsDialog.open()
-                        webSearchField.text = results.webSearchUrl
+                        settingsView.open()
                         event.accepted = true
                     } else if (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)) {
                         results.nextFilter()
@@ -498,10 +406,7 @@ Window {
                 height: 24
                 text: "⚙"
                 font.pixelSize: 13
-                onClicked: {
-                    settingsDialog.open()
-                    webSearchField.text = results.webSearchUrl
-                }
+                onClicked: settingsView.open()
             }
         }
 

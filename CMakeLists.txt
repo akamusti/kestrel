@@ -50,6 +50,7 @@ set_source_files_properties(qml/ResultDelegate.qml PROPERTIES QT_RESOURCE_ALIAS 
 set_source_files_properties(qml/ShortcutHint.qml PROPERTIES QT_RESOURCE_ALIAS ShortcutHint.qml)
 set_source_files_properties(qml/ActionPanel.qml PROPERTIES QT_RESOURCE_ALIAS ActionPanel.qml)
 set_source_files_properties(qml/Toast.qml PROPERTIES QT_RESOURCE_ALIAS Toast.qml)
+set_source_files_properties(qml/SettingsView.qml PROPERTIES QT_RESOURCE_ALIAS SettingsView.qml)
 
 qt_add_qml_module(kestrel_core
     URI Kestrel
@@ -61,6 +62,7 @@ qt_add_qml_module(kestrel_core
         qml/ShortcutHint.qml
         qml/ActionPanel.qml
         qml/Toast.qml
+        qml/SettingsView.qml
 )
 
 qt_add_executable(kestrel
