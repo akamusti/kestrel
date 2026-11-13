@@ -21,6 +21,7 @@ struct DesktopEntry
     QStringList keywords;
     QStringList categories;
     bool terminal = false;
+    bool dbusActivatable = false;
 };
 
 struct DesktopScan

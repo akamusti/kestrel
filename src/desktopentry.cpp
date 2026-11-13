@@ -226,6 +226,8 @@ DesktopEntry parseDesktopFile(const QString &path, bool *ok)
     entry.keywords = splitList(values.value(QStringLiteral("Keywords")));
     entry.categories = splitList(values.value(QStringLiteral("Categories")));
     entry.terminal = values.value(QStringLiteral("Terminal")) == QLatin1String("true");
+    entry.dbusActivatable =
+        values.value(QStringLiteral("DBusActivatable")) == QLatin1String("true");
 
     if (entry.execRaw.isEmpty()) {
         return {};

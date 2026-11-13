@@ -299,6 +299,7 @@ void TestCore::parsesDesktopEntry()
                "Icon=example\n"
                "Exec=example --flag %U\n"
                "Terminal=true\n"
+               "DBusActivatable=true\n"
                "Keywords=ex;demo;\n"
                "Categories=Utility;\n");
     file.close();
@@ -310,6 +311,7 @@ void TestCore::parsesDesktopEntry()
     QCOMPARE(entry.iconName, QStringLiteral("example"));
     QCOMPARE(entry.id, QStringLiteral("org.example.App.desktop"));
     QVERIFY(entry.terminal);
+    QVERIFY(entry.dbusActivatable);
     QCOMPARE(entry.keywords, QStringList({QStringLiteral("ex"), QStringLiteral("demo")}));
 }
 

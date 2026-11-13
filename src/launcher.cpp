@@ -1,5 +1,7 @@
 #include "launcher.h"
 
+#include <QDBusConnection>
+#include <QDBusInterface>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -26,10 +28,42 @@ int programIndex(const QStringList &command)
     }
     return (index < command.size()) ? index : -1;
 }
+
+bool activateOverDbus(const DesktopEntry &entry)
+{
+    QString service = entry.id;
+    if (!service.endsWith(QStringLiteral(".desktop"))) {
+        return false;
+    }
+    service.chop(QStringLiteral(".desktop").size());
+    if (service.isEmpty()) {
+        return false;
+    }
+
+    QString objectPath = service;
+    objectPath.replace(u'.', u'/');
+    objectPath.replace(u'-', u'_');
+    objectPath.prepend(u'/');
+
+    QDBusInterface application(service, objectPath, QStringLiteral("org.freedesktop.Application"),
+                               QDBusConnection::sessionBus());
+    if (!application.isValid()) {
+        return false;
+    }
+
+    // DBusActivatable applications own their process and desktop identity when
+    // started through their standard activation interface.
+    application.asyncCall(QStringLiteral("Activate"), QVariantMap{});
+    return true;
+}
 } // namespace
 
 bool launch(const DesktopEntry &entry)
 {
+    if (entry.dbusActivatable && activateOverDbus(entry)) {
+        return true;
+    }
+
     const QStringList command = launchCommand(entry);
     if (command.isEmpty()) {
         return false;
